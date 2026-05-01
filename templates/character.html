@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Live2D Galgame - 角色设置">
+    <title>角色设置 - AI Live2D Galgame</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+
+<body>
+
+    <!-- Particle Background -->
+    <div class="particles" id="particles"></div>
+
+    <div class="container">
+        <!-- Unified Navigation -->
+        <nav class="main-nav">
+            <a href="/" class="nav-btn">⚙️ API 设置</a>
+            <a href="/character" class="nav-btn active">🎭 角色设置</a>
+            <a href="/prompt" class="nav-btn">🧠 全局提示词</a>
+        </nav>
+
+        <div id="panels-container">
+            <!-- 3. 角色设置 Panel -->
+            <div id="panel-character" class="nav-panel active-panel">
+                <!-- Character Selection & Upload -->
+                <section class="glass-panel" style="animation-delay: 0.1s">
+                    <div class="panel-title">
+                        <span class="icon">👤</span>
+                        选择或上传角色
+                    </div>
+
+                    <!-- Upload Area -->
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-dropzone" id="upload-dropzone">
+                            <div class="upload-icon">📦</div>
+                            <div class="upload-text">拖拽 Live2D 角色 ZIP 文件到这里</div>
+                            <div class="upload-subtext">或者点击选择文件</div>
+                            <input type="file" id="upload-input" accept=".zip" style="display:none">
+                        </div>
+                        <div class="upload-progress" id="upload-progress" style="display:none">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                            <div class="progress-text" id="progress-text">上传中...</div>
+                        </div>
+                    </div>
+
+                    <div class="character-grid" id="character-grid">
+                        <div class="character-card-loading">
+                            <div class="loading-spinner-sm"></div>
+                            <span>加载角色列表中...</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="glass-panel" style="animation-delay: 0.15s">
+                    <div class="panel-title">
+                        <span class="icon">🎭</span>
+                        角色信息编辑
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="char_name">角色名称 (Name)</label>
+                            <input type="text" id="char_name" placeholder="输入角色名字..." autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="char_persona">角色描述 (Persona)</label>
+                        <textarea id="char_persona" rows="4" placeholder="详细描述角色的性格、外貌、背景故事..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="char_greeting">开场白 (First Message)</label>
+                        <textarea id="char_greeting" rows="3" placeholder="角色的第一句话..."></textarea>
+                    </div>
+                    <div class="form-actions" style="margin-top: 1rem;">
+                        <button class="btn btn-primary btn-sm" id="btn-save-char-info">💾 保存角色信息</button>
+                        <span class="status-msg" id="char-info-status"></span>
+                    </div>
+                </section>
+
+                <!-- Expression-Motion Mapping Panel -->
+                <section class="glass-panel" style="animation-delay: 0.2s" id="mapping-panel">
+                    <div class="panel-title">
+                        <span class="icon">🎭</span>
+                        表情-动作映射设置
+                        <span class="panel-subtitle">定义哪个表情对应触发哪个动作</span>
+                    </div>
+                    <div class="mapping-info" id="mapping-info">
+                        <div class="info-hint">💡 请先选择一个角色，然后在此配置表情与动作的对应关系</div>
+                    </div>
+                    <div class="mapping-container" id="mapping-container" style="display:none">
+                        <div class="mapping-list" id="mapping-list">
+                            <!-- Mapping rows generated dynamically -->
+                        </div>
+                        <div class="mapping-actions" style="margin-bottom: 1rem;">
+                            <button class="btn btn-secondary btn-sm" id="btn-add-mapping" onclick="addMappingRow()">➕ 添加自定义映射</button>
+                        </div>
+                        <div class="mapping-actions">
+                            <button class="btn btn-primary btn-sm" id="btn-save-mapping">💾 保存映射配置</button>
+                            <button class="btn btn-secondary btn-sm" id="btn-reset-mapping">🔄 重置为默认</button>
+                        </div>
+                        <div class="status-msg" id="mapping-status"></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Start Button -->
+        <div class="start-section">
+            <button class="btn btn-primary btn-start" id="btn-start">
+                ▶ 开始对话
+            </button>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js?v=6"></script>
+</body>
+
+</html>

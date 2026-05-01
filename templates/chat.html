@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Live2D Galgame - 对话界面">
+    <title>AI Live2D Galgame - 对话</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/chat.css?v=2">
+</head>
+
+<body>
+
+    <div class="game-container">
+        <!-- Background -->
+        <div class="game-bg"></div>
+
+        <!-- Live2D Canvas -->
+        <canvas id="live2d-canvas"></canvas>
+
+        <!-- Model Loading Overlay -->
+        <div class="model-loading" id="model-loading">
+            <div class="loading-spinner"></div>
+            <p>正在加载角色模型...</p>
+        </div>
+
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <button class="back-btn" id="btn-back">← 返回</button>
+            <span class="char-name-tag" id="char-name-tag">AI 对话</span>
+            <div class="top-bar-actions" style="position: relative;">
+                <button class="back-btn" id="btn-sessions"
+                    style="font-size: 1.2rem; padding: 0.2rem 0.6rem; margin-right: 0.5rem;" title="聊天记录">📜</button>
+                <button class="back-btn" id="btn-settings"
+                    style="font-size: 1.2rem; padding: 0.2rem 0.6rem;">⚙️</button>
+
+                <div id="chat-settings-panel"
+                    style="display:none; position:absolute; top: 100%; right: 0; background: rgba(10,10,35,0.9); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); width: 250px; margin-top: 0.5rem; z-index: 200;">
+                    <label style="color:#eee; font-size:0.8rem; display:block; margin-bottom:0.5rem;">背景图片 URL</label>
+                    <input type="text" id="chat_background_input" placeholder="https://..."
+                        style="width:100%; margin-bottom: 1rem; padding: 0.3rem; border-radius:4px; border:1px solid #555; background: #222; color: #fff;">
+
+                    <label style="color:#eee; font-size:0.8rem; display:block; margin-bottom:0.5rem;">对话框透明度 <span
+                            id="opacity_val_display">0.75</span></label>
+                    <input type="range" id="chat_opacity_slider" min="0" max="1" step="0.05" value="0.75"
+                        style="width:100%; cursor:pointer;">
+                </div>
+
+                <div id="chat-sessions-panel"
+                    style="display:none; position:absolute; top: 100%; right: 0; background: rgba(10,10,35,0.9); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); width: 300px; margin-top: 0.5rem; z-index: 200; max-height: 400px; overflow-y:auto;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">
+                        <span style="color:white; font-weight:bold;">聊天记录</span>
+                        <button class="btn btn-primary btn-sm" id="btn-new-session"
+                            style="padding:0.2rem 0.5rem; font-size:0.8rem;">开启新对话</button>
+                    </div>
+                    <div id="sessions-list" style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <!-- Session rows -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Size Control Slider -->
+        <div class="size-control">
+            <label>大小</label>
+            <input type="range" class="size-slider" id="size-slider" min="0.3" max="1.5" step="0.05" value="0.5">
+            <span class="size-value" id="size-value">50%</span>
+        </div>
+
+        <!-- Dialogue Area (Galgame Style) -->
+        <div class="dialogue-area">
+            <div class="dialogue-box">
+                <div class="dialogue-header">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span class="dialogue-name" id="dialogue-name">角色</span>
+                        <span class="emotion-tag" style="display:none"></span>
+                        <span class="dialogue-indicator"></span>
+                    </div>
+                    <button id="btn-expand-dialogue"
+                        style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:0.9rem; transition:color 0.2s;">▲
+                        展开记录</button>
+                </div>
+                <div class="dialogue-content">
+                    <div class="dialogue-text"></div>
+                    <div class="dialogue-history" id="dialogue-history" style="display:none;"></div>
+                </div>
+                <div class="click-continue" style="display:none">▼ 点击继续</div>
+                <!-- Input Area inside dialogue box -->
+                <div class="input-area">
+                    <input type="text" id="chat-input" placeholder="输入你想说的话..." autocomplete="off">
+                    <button class="send-btn" id="btn-send" title="发送">➤</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Live2D SDK & Dependencies (CDN) -->
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
+
+    <!-- App Scripts -->
+    <script src="/static/js/live2d-helper.js?v=15"></script>
+    <script src="/static/js/chat.js?v=15"></script>
+</body>
+
+</html>

@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Project Specific
+# We ignore uploaded characters to keep the repo size small, 
+# but keep the folder structure via .gitkeep
+live2d_characters/*/
+!live2d_characters/.gitkeep
+
+# Ignore dynamic mappings that change during runtime
+emotion_mappings.json
+
+# Logs
+*.log
