@@ -21,8 +21,8 @@
 
 1. 克隆仓库：
    ```bash
-   git clone <repository-url>
-   cd <repository-name>
+   git clone https://github.com/FinnKyo/Live2D-AI-Chat.git
+   cd Live2D-AI-Chat
    ```
 
 2. 安装依赖：
@@ -44,14 +44,6 @@
 2. **角色上传**：在“角色设置”页面上传 Live2D 角色的 ZIP 压缩包。
 3. **映射配置**：设置 AI 返回特定表情时角色应执行的动作。
 4. **开始对话**：进入“对话界面”，选择角色并开始 AI 互动。
-
-## 项目结构
-
-- `app.py`: Flask 后端逻辑，处理 API 代理、文件管理和路由。
-- `static/`: 包含 CSS、JavaScript 及 Live2D SDK 相关脚本。
-- `templates/`: HTML 模板文件。
-- `live2d_characters/`: 存放上传的 Live2D 角色模型。
-- `emotion_mappings.json`: 存储表情与动作的映射配置。
 
 ## 注意事项
 
