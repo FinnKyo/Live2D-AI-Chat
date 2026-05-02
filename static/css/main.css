@@ -55,40 +55,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-sm{padding:.5rem 1rem;font-size:.8rem}
 .btn-block{width:100%}
 
-/* === Character Grid === */
-.character-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;margin-top:1.5rem}
-.character-card{background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius-lg);overflow:hidden;cursor:pointer;transition:all var(--transition-normal);position:relative}
-.character-card::before{content:'';position:absolute;inset:0;border-radius:var(--radius-lg);padding:1px;background:var(--accent-gradient);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity var(--transition-normal)}
-.character-card:hover::before{opacity:1}
-.character-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(108,92,231,.2)}
-.character-card.selected{border-color:var(--accent-primary);box-shadow:0 0 20px var(--accent-glow)}
-.character-card.selected::before{opacity:1}
-.card-image{width:100%;height:220px;object-fit:cover;object-position:top;display:block}
-.card-image-placeholder{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(108,92,231,.15),rgba(168,85,247,.1));font-size:4rem}
-.card-info{padding:1rem 1.2rem}
-.card-name{font-size:1.1rem;font-weight:500;margin-bottom:.3rem}
-.card-desc{font-size:.8rem;color:var(--text-secondary);line-height:1.4}
-.card-badge{position:absolute;top:12px;right:12px;background:var(--accent-gradient);color:#fff;font-size:.7rem;font-weight:600;padding:.25rem .6rem;border-radius:20px;z-index:2}
-.card-delete-btn{position:absolute;top:12px;left:12px;background:rgba(255,107,107,.2);border:1px solid rgba(255,107,107,.3);color:#ff6b6b;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:all .2s;z-index:2;opacity:0}
-.character-card:hover .card-delete-btn{opacity:1}
-.card-delete-btn:hover{background:rgba(255,107,107,.4);transform:scale(1.1)}
+/* === Character Selection Grid removed === */
 
-/* === Loading state for character cards === */
-.character-card-loading{display:flex;align-items:center;justify-content:center;gap:.8rem;padding:2rem;color:var(--text-secondary);font-size:.9rem;grid-column:1/-1}
-.loading-spinner-sm{width:20px;height:20px;border:2px solid rgba(108,92,231,.15);border-top-color:#a855f7;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* === Upload Area === */
-.upload-area{margin-bottom:1rem}
-.upload-dropzone{border:2px dashed rgba(108,92,231,.3);border-radius:var(--radius-md);padding:2rem;text-align:center;cursor:pointer;transition:all var(--transition-normal);background:rgba(108,92,231,.03)}
-.upload-dropzone:hover,.upload-dropzone.dragover{border-color:var(--accent-primary);background:rgba(108,92,231,.08);transform:translateY(-2px)}
-.upload-icon{font-size:2.5rem;margin-bottom:.5rem}
-.upload-text{font-size:.95rem;color:var(--text-primary);font-weight:500;margin-bottom:.3rem}
-.upload-subtext{font-size:.8rem;color:var(--text-muted)}
-.upload-progress{padding:1rem}
-.progress-bar{width:100%;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-bottom:.5rem}
-.progress-fill{height:100%;background:var(--accent-gradient);border-radius:3px;transition:width .3s ease;width:0}
-.progress-text{font-size:.8rem;color:var(--text-secondary);text-align:center}
+/* === Loading state removed === */
 
 /* === Expression-Motion Mapping === */
 .mapping-info{margin-bottom:1rem}
@@ -122,7 +91,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
-@media(max-width:768px){.container{padding:1rem}.header h1{font-size:1.8rem}.glass-panel{padding:1.2rem}.character-grid{grid-template-columns:1fr}.mapping-row{grid-template-columns:1fr;gap:.4rem}.mapping-arrow{display:none}}
+@media(max-width:768px){.container{padding:1rem}.header h1{font-size:1.8rem}.glass-panel{padding:1.2rem}.mapping-row{grid-template-columns:1fr;gap:.4rem}.mapping-arrow{display:none}}
 
 /* === Navigation Bar === */
 .main-nav {

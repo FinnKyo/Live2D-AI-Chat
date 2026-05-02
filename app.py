@@ -1,12 +1,10 @@
 """
 AI Live2D Galgame - Flask 后端
 提供页面路由、OpenAI 兼容 API 代理、Live2D 角色管理
-支持表情-动作映射配置和 ZIP 角色上传
+支持表情-动作映射配置
 """
 import os
 import json
-import shutil
-import zipfile
 import urllib.request
 import urllib.error
 from flask import Flask, render_template, request, jsonify, send_from_directory, abort
@@ -16,9 +14,9 @@ app = Flask(__name__)
 # ============================================================
 # Live2D 角色目录配置
 # ============================================================
-# 上传角色存放目录
-UPLOAD_DIR = os.path.join(app.root_path, "live2d_characters")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# 角色文件存放目录
+CHARACTERS_DIR = os.path.join(app.root_path, "live2d_characters")
+os.makedirs(CHARACTERS_DIR, exist_ok=True)
 
 # 表情-动作映射配置文件
 MAPPING_FILE = os.path.join(app.root_path, "emotion_mappings.json")
@@ -28,10 +26,10 @@ def get_all_characters():
     """获取所有可用角色列表"""
     characters = []
 
-    # 上传的角色
-    if os.path.isdir(UPLOAD_DIR):
-        for name in sorted(os.listdir(UPLOAD_DIR)):
-            char_dir = os.path.join(UPLOAD_DIR, name)
+    # 遍历角色目录
+    if os.path.isdir(CHARACTERS_DIR):
+        for name in sorted(os.listdir(CHARACTERS_DIR)):
+            char_dir = os.path.join(CHARACTERS_DIR, name)
             if not os.path.isdir(char_dir):
                 continue
             model_json = find_model_json(char_dir)
@@ -41,7 +39,7 @@ def get_all_characters():
                     "name": name,
                     "path": char_dir,
                     "model_json": model_json,
-                    "builtin": False,
+                    "builtin": True,
                 })
 
     return characters
@@ -65,7 +63,7 @@ def find_thumbnail(directory):
 
 def get_character_dir(char_id):
     """获取角色目录路径"""
-    char_dir = os.path.join(UPLOAD_DIR, char_id)
+    char_dir = os.path.join(CHARACTERS_DIR, char_id)
     if os.path.isdir(char_dir):
         return char_dir
     return None
@@ -188,95 +186,6 @@ def api_characters():
         })
 
     return jsonify(result)
-
-
-@app.route("/api/upload_character", methods=["POST"])
-def api_upload_character():
-    """上传 Live2D 角色 ZIP 文件"""
-    if "file" not in request.files:
-        return jsonify({"error": "没有上传文件"}), 400
-
-    file = request.files["file"]
-    if not file.filename or not file.filename.endswith(".zip"):
-        return jsonify({"error": "请上传 .zip 文件"}), 400
-
-    # 使用文件名(去扩展名)作为角色 ID
-    char_name = os.path.splitext(file.filename)[0]
-    # 清理名称中的特殊字符
-    char_name = "".join(c for c in char_name if c.isalnum() or c in "._- ").strip()
-    if not char_name:
-        char_name = "uploaded_character"
-
-    char_dir = os.path.join(UPLOAD_DIR, char_name)
-
-    # 如果已存在则先删除
-    if os.path.exists(char_dir):
-        shutil.rmtree(char_dir)
-
-    try:
-        # 保存临时文件
-        tmp_path = os.path.join(UPLOAD_DIR, "_tmp_upload.zip")
-        file.save(tmp_path)
-
-        # 解压
-        with zipfile.ZipFile(tmp_path, "r") as zf:
-            zf.extractall(char_dir)
-
-        os.remove(tmp_path)
-
-        # 清理 macOS 生成的垃圾文件
-        macosx_dir = os.path.join(char_dir, "__MACOSX")
-        if os.path.exists(macosx_dir):
-            shutil.rmtree(macosx_dir)
-
-        # 检查是否嵌套了一层目录 (常见的 ZIP 打包方式)
-        items = [i for i in os.listdir(char_dir) if not i.startswith(".")]
-        if len(items) == 1 and os.path.isdir(os.path.join(char_dir, items[0])):
-            # 将子目录内容移到上层
-            nested_dir = os.path.join(char_dir, items[0])
-            for item in os.listdir(nested_dir):
-                shutil.move(os.path.join(nested_dir, item), char_dir)
-            os.rmdir(nested_dir)
-
-        # 验证是否有 model3.json
-        model_json = find_model_json(char_dir)
-        if not model_json:
-            shutil.rmtree(char_dir)
-            return jsonify({"error": "ZIP 中未找到 .model3.json 文件，请确保文件结构正确"}), 400
-
-        return jsonify({
-            "success": True,
-            "character_id": char_name,
-            "model_json": model_json,
-            "message": f"角色 '{char_name}' 上传成功！",
-        })
-
-    except zipfile.BadZipFile:
-        if os.path.exists(char_dir):
-            shutil.rmtree(char_dir)
-        return jsonify({"error": "无效的 ZIP 文件"}), 400
-    except Exception as e:
-        if os.path.exists(char_dir):
-            shutil.rmtree(char_dir)
-        return jsonify({"error": f"上传处理失败: {str(e)}"}), 500
-
-
-@app.route("/api/delete_character/<char_id>", methods=["DELETE"])
-def api_delete_character(char_id):
-    """删除上传的角色"""
-    char_dir = os.path.join(UPLOAD_DIR, char_id)
-    if not os.path.exists(char_dir):
-        return jsonify({"error": "角色不存在"}), 404
-
-    shutil.rmtree(char_dir)
-
-    # 同时删除相关的映射配置
-    mappings = load_mappings()
-    if char_id in mappings:
-        del mappings[char_id]
-        save_mappings(mappings)
-
-    return jsonify({"success": True, "message": f"角色 '{char_id}' 已删除"})
 
 
 # ============================================================

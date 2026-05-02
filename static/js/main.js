@@ -124,7 +124,6 @@ async function loadCharacters() {
     try {
         const resp = await fetch('/api/characters');
         allCharacters = await resp.json();
-        renderCharacterGrid();
 
         // Restore previous selection
         const savedId = localStorage.getItem('galgame_character');
@@ -134,49 +133,14 @@ async function loadCharacters() {
             selectCharacter(allCharacters[0].id);
         }
     } catch (e) {
-        const grid = document.getElementById('character-grid');
-        if (grid) {
-            grid.innerHTML = '<div class="character-card-loading"><span>❌ 加载角色失败: ' + e.message + '</span></div>';
-        }
+        console.error('Failed to load characters:', e);
     }
-}
-
-function renderCharacterGrid() {
-    const grid = document.getElementById('character-grid');
-    if (!grid) return;
-
-    if (allCharacters.length === 0) {
-        grid.innerHTML = '<div class="character-card-loading"><span>暂无可用角色，请上传 Live2D 角色 ZIP 文件</span></div>';
-        return;
-    }
-
-    grid.innerHTML = allCharacters.map(char => `
-        <div class="character-card ${char.id === selectedCharacterId ? 'selected' : ''}" 
-             data-char-id="${char.id}" onclick="selectCharacter('${char.id}')">
-            ${char.thumbnail 
-                ? `<img class="card-image" src="${char.thumbnail}" alt="${char.name}" loading="lazy">`
-                : `<div class="card-image card-image-placeholder"><span>🎭</span></div>`
-            }
-            <div class="card-info">
-                <div class="card-name">${escapeHtml(char.name)}</div>
-                <div class="card-desc">
-                    表情: ${char.expressions.length} 个 · 动作: ${char.motions.length} 个
-                </div>
-            </div>
-            <button class="card-delete-btn" onclick="event.stopPropagation(); deleteCharacter('${char.id}')" title="删除角色">✕</button>
-        </div>
-    `).join('');
 }
 
 /* === Character Selection === */
 function selectCharacter(charId) {
     selectedCharacterId = charId;
     localStorage.setItem('galgame_character', charId);
-
-    // Update visual selection
-    document.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
-    const card = document.querySelector(`.character-card[data-char-id="${charId}"]`);
-    if (card) card.classList.add('selected');
 
     // Find character data
     currentCharacterData = allCharacters.find(c => c.id === charId);
@@ -201,126 +165,6 @@ function selectCharacter(charId) {
 
         // Load expression-motion mapping
         loadMappingUI(currentCharacterData);
-    }
-}
-
-/* === Delete Character === */
-async function deleteCharacter(charId) {
-    if (!confirm(`确定要删除角色 "${charId}" 吗？`)) return;
-
-    try {
-        const resp = await fetch(`/api/delete_character/${charId}`, { method: 'DELETE' });
-        const data = await resp.json();
-        if (data.success) {
-            if (selectedCharacterId === charId) {
-                selectedCharacterId = null;
-                currentCharacterData = null;
-            }
-            await loadCharacters();
-        } else {
-            alert(data.error || '删除失败');
-        }
-    } catch (e) {
-        alert('删除失败: ' + e.message);
-    }
-}
-
-/* === ZIP Upload === */
-function initUpload() {
-    const dropzone = document.getElementById('upload-dropzone');
-    const input = document.getElementById('upload-input');
-    if (!dropzone || !input) return;
-
-    dropzone.addEventListener('click', () => input.click());
-    
-    dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('dragover');
-    });
-
-    dropzone.addEventListener('dragleave', () => {
-        dropzone.classList.remove('dragover');
-    });
-
-    dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0 && files[0].name.endsWith('.zip')) {
-            uploadFile(files[0]);
-        } else {
-            alert('请上传 .zip 文件');
-        }
-    });
-
-    input.addEventListener('change', () => {
-        if (input.files.length > 0) {
-            uploadFile(input.files[0]);
-            input.value = '';
-        }
-    });
-}
-
-async function uploadFile(file) {
-    const progressEl = document.getElementById('upload-progress');
-    const progressFill = document.getElementById('progress-fill');
-    const progressText = document.getElementById('progress-text');
-    const dropzone = document.getElementById('upload-dropzone');
-
-    if (dropzone) dropzone.style.display = 'none';
-    if (progressEl) progressEl.style.display = 'block';
-    if (progressFill) progressFill.style.width = '0%';
-    if (progressText) progressText.textContent = `正在上传 ${file.name}...`;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-        // Simulate progress (actual progress would need XMLHttpRequest)
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-            progress = Math.min(progress + Math.random() * 15, 90);
-            if (progressFill) progressFill.style.width = progress + '%';
-        }, 200);
-
-        const resp = await fetch('/api/upload_character', {
-            method: 'POST',
-            body: formData,
-        });
-
-        clearInterval(progressInterval);
-        if (progressFill) progressFill.style.width = '100%';
-
-        const data = await resp.json();
-        if (data.success) {
-            if (progressText) progressText.textContent = '✓ ' + data.message;
-            setTimeout(async () => {
-                if (dropzone) dropzone.style.display = '';
-                if (progressEl) progressEl.style.display = 'none';
-                await loadCharacters();
-                // Auto select newly uploaded character
-                if (data.character_id) {
-                    selectCharacter(data.character_id);
-                }
-            }, 1500);
-        } else {
-            if (progressText) progressText.textContent = '✗ ' + (data.error || '上传失败');
-            if (progressFill) {
-                progressFill.style.width = '100%';
-                progressFill.style.background = 'var(--danger)';
-            }
-            setTimeout(() => {
-                if (dropzone) dropzone.style.display = '';
-                if (progressEl) progressEl.style.display = 'none';
-                if (progressFill) progressFill.style.background = '';
-            }, 3000);
-        }
-    } catch (e) {
-        if (progressText) progressText.textContent = '✗ 上传失败: ' + e.message;
-        setTimeout(() => {
-            if (dropzone) dropzone.style.display = '';
-            if (progressEl) progressEl.style.display = 'none';
-        }, 3000);
     }
 }
 
@@ -538,9 +382,6 @@ function initEventListeners() {
 
     const resetMappingBtn = document.getElementById('btn-reset-mapping');
     if (resetMappingBtn) resetMappingBtn.addEventListener('click', resetMappings);
-
-    // Init upload functionality
-    initUpload();
 }
 
 /* === Utility === */
