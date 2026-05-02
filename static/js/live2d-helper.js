@@ -190,35 +190,7 @@ class Live2DHelper {
             if (mappings && Object.keys(mappings).length > 0) {
                 // Convert mapping config to helper's internal format
                 this.expressionMotionMap = {};
-                for (const [expName, config] of Object.entries(mappings)) {
-                    let motionGroup = null;
-                    let motionIndex = null;
-                    let expressionName = null;
-
-                    // Support both string format "Group:Index" and object format
-                    if (typeof config === 'string') {
-                        const parts = config.split(':');
-                        if (parts.length === 2) {
-                            motionGroup = parts[0];
-                            motionIndex = parseInt(parts[1], 10);
-                        }
-                    } else if (typeof config === 'object' && config !== null) {
-                        expressionName = config.expression || null;
-                        if (config.motion) {
-                            const parts = config.motion.split(':');
-                            if (parts.length === 2) {
-                                motionGroup = parts[0];
-                                motionIndex = parseInt(parts[1], 10);
-                            }
-                        }
-                    }
-
-                    this.expressionMotionMap[expName.toLowerCase()] = {
-                        expression: expressionName ? expressionName.toLowerCase().replace('.exp3.json', '') : null,
-                        group: motionGroup,
-                        index: motionIndex,
-                    };
-                }
+                this.parseMappingData(mappings);
                 console.log('Loaded mappings from backend config.yml:', this.expressionMotionMap);
             } else {
                 // 如果后端没有配置，尝试回退到 localStorage (兼容旧版本)

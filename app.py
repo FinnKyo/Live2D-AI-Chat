@@ -48,26 +48,12 @@ def get_all_characters():
 
 def find_model_json(directory):
     """在目录中查找 .model3.json 文件"""
-    for f in os.listdir(directory):
-        if f.endswith(".model3.json"):
-            return f
-    return None
+    return next((f for f in os.listdir(directory) if f.endswith(".model3.json")), None)
 
 
 def find_thumbnail(directory):
     """在目录中查找缩略图"""
-    for f in os.listdir(directory):
-        if "thumbnail" in f.lower() and f.endswith(".png"):
-            return f
-    return None
-
-
-def get_character_dir(char_id):
-    """获取角色目录路径"""
-    char_dir = os.path.join(CHARACTERS_DIR, char_id)
-    if os.path.isdir(char_dir):
-        return char_dir
-    return None
+    return next((f for f in os.listdir(directory) if "thumbnail" in f.lower() and f.endswith(".png")), None)
 
 
 def load_mappings():
@@ -111,7 +97,6 @@ def api_characters():
     return jsonify(results)
 
 
-@app.route("/live2d/<path:filename>")
 @app.route("/live2d_characters/<path:filename>")
 def serve_character_files(filename):
     """为 Live2D 模型文件提供静态资源路由"""
