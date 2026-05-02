@@ -15,9 +15,7 @@ ENV/
 .DS_Store
 
 # Project Specific
-# We ignore uploaded characters to keep the repo size small, 
-# but keep the folder structure via .gitkeep
-live2d_characters/*/
+# Allow live2d_characters to be tracked for users to use directly
 !live2d_characters/.gitkeep
 
 # Ignore dynamic mappings that change during runtime
