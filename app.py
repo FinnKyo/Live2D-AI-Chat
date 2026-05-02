@@ -81,101 +81,6 @@ def load_mappings():
     return {}
 
 
-def save_mappings(data):
-    """保存表情-动作映射配置"""
-    with open(MAPPING_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-# ============================================================
-# 页面路由
-# ============================================================
-@app.route("/")
-def index():
-    """主页 - 直接进入对话界面"""
-    return render_template("chat.html")
-
-
-# ============================================================
-# Live2D 角色文件服务
-# ============================================================
-@app.route("/live2d/<char_id>/<path:filename>")
-def serve_live2d(char_id, filename):
-    """提供 Live2D 角色文件（从对应角色目录）"""
-    char_dir = get_character_dir(char_id)
-    if not char_dir:
-        abort(404)
-    # 安全检查：防止路径遍历
-    full_path = os.path.normpath(os.path.join(char_dir, filename))
-    if not full_path.startswith(os.path.normpath(char_dir)):
-        abort(403)
-    if not os.path.isfile(full_path):
-        abort(404)
-    directory = os.path.dirname(full_path)
-    basename = os.path.basename(full_path)
-    return send_from_directory(directory, basename)
-
-
-# ============================================================
-# 角色管理 API
-# ============================================================
-@app.route("/api/characters", methods=["GET"])
-def api_characters():
-    """获取所有可用角色列表"""
-    characters = get_all_characters()
-    result = []
-    for c in characters:
-        # 解析 model3.json 获取表情和动作信息
-        model_path = os.path.join(c["path"], c["model_json"])
-        expressions = []
-        motions = []
-        thumbnail = None
-
-        try:
-            with open(model_path, "r", encoding="utf-8") as f:
-                model_data = json.load(f)
-            file_refs = model_data.get("FileReferences", {})
-
-            # 获取表情列表
-            for exp in file_refs.get("Expressions", []):
-                name = exp.get("Name", "")
-                # 去掉 .exp3.json 后缀作为显示名
-                display_name = name.replace(".exp3.json", "")
-                expressions.append({"name": name, "display": display_name})
-
-            # 获取动作列表
-            motion_groups = file_refs.get("Motions", {})
-            for group_name, group_motions in motion_groups.items():
-                for idx, motion in enumerate(group_motions):
-                    motion_file = motion.get("File", "")
-                    # 提取动作文件名作为显示名
-                    display = os.path.basename(motion_file).replace(".motion3.json", "").replace("[FIXED]", "")
-                    motions.append({
-                        "group": group_name,
-                        "index": idx,
-                        "file": motion_file,
-                        "display": display,
-                    })
-        except Exception:
-            pass
-
-        # 查找缩略图
-        thumb = find_thumbnail(c["path"])
-        if thumb:
-            thumbnail = f"/live2d/{c['id']}/{thumb}"
-
-        result.append({
-            "id": c["id"],
-            "name": c["name"],
-            "model_url": f"/live2d/{c['id']}/{c['model_json']}",
-            "thumbnail": thumbnail,
-            "expressions": expressions,
-            "motions": motions,
-        })
-
-    return jsonify(result)
-
-
 # ============================================================
 # 表情-动作映射 API
 # ============================================================
@@ -185,15 +90,6 @@ def api_get_mappings(char_id):
     mappings = load_mappings()
     char_mappings = mappings.get(char_id, {})
     return jsonify(char_mappings)
-
-
-@app.route("/api/mappings/<char_id>", methods=["POST"])
-def api_save_mappings(char_id):
-    """保存指定角色的表情-动作映射 (已禁用，请手动修改 config.yml)"""
-    return jsonify({
-        "error": "配置目前为只读模式。请直接修改根目录下的 config.yml 文件以更新映射，这样可以保留您的注释和格式。",
-        "success": False
-    }), 403
 
 
 # ============================================================

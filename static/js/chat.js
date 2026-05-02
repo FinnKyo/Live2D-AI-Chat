@@ -355,7 +355,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Background and opacity settings
     const btnSettings = document.getElementById('btn-settings');
-    const settingsPanel = document.getElementById('chat-settings-panel');
     const opacitySlider = document.getElementById('chat_opacity_slider');
     const opacityDisplay = document.getElementById('opacity_val_display');
     const bgInput = document.getElementById('chat_background_input');
@@ -379,12 +378,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const sessionsPanel = document.getElementById('chat-sessions-panel');
 
-    if (btnSettings && settingsPanel && opacitySlider) {
-        btnSettings.addEventListener('click', () => {
-            settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
-            if (sessionsPanel) sessionsPanel.style.display = 'none';
-        });
-
+    if (btnSettings && opacitySlider) {
+        // btnSettings already toggles drawer via initSettingsDrawer, 
+        // this block is primarily for opacity and background live updates.
+        
         // Initialize slider value
         opacitySlider.value = settings.dialogueOpacity;
         if (opacityDisplay) opacityDisplay.textContent = settings.dialogueOpacity;
