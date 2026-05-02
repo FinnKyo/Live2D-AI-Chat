@@ -85,6 +85,7 @@ function getSettings() {
         dialogueOpacity: localStorage.getItem('galgame_dialogue_opacity') || '0.75',
         modelUrl: localStorage.getItem('galgame_model_url') || '',
         charId: localStorage.getItem('galgame_character') || '',
+        authorsNote: localStorage.getItem('galgame_authors_note') || '',
     };
 }
 
@@ -300,30 +301,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function initSystemMessage() {
     const settings = getSettings();
-    const emotionInstruction = buildEmotionInstruction();
     
     let globalPrompt = settings.customSystemPrompt || "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}.";
-    globalPrompt = globalPrompt.replace(/\{\{char\}\}/g, settings.charName).replace(/\{\{user\}\}/g, 'User');
+    const charName = settings.charName || 'Character';
+    const userName = 'User';
+
+    const replaceMacros = (text) => {
+        if (!text) return '';
+        return text.replace(/\{\{char\}\}/g, charName).replace(/\{\{user\}\}/g, userName);
+    };
+
+    globalPrompt = replaceMacros(globalPrompt);
 
     let fullSystemPrompt = globalPrompt + '\n';
 
     if (settings.charPersona) {
-        fullSystemPrompt += `\n[Character Persona]\n${settings.charPersona}\n`;
+        fullSystemPrompt += `\n[Character Persona]\n${replaceMacros(settings.charPersona)}\n`;
     }
     if (settings.worldScenario) {
-        fullSystemPrompt += `\n[Scenario]\n${settings.worldScenario}\n`;
+        fullSystemPrompt += `\n[Scenario]\n${replaceMacros(settings.worldScenario)}\n`;
     }
     if (settings.userPersona) {
-        fullSystemPrompt += `\n[User Persona]\n${settings.userPersona}\n`;
+        fullSystemPrompt += `\n[User Persona]\n${replaceMacros(settings.userPersona)}\n`;
     }
 
     // Remove any existing system messages to avoid duplication
     state.messages = state.messages.filter(m => m.role !== 'system');
 
-    // Prepend the updated system message
+    // Prepend the updated foundational system message
     state.messages.unshift({
         role: 'system',
-        content: fullSystemPrompt + emotionInstruction,
+        content: fullSystemPrompt,
     });
 }
 
@@ -535,7 +543,38 @@ async function sendMessage() {
         const historyMsgs = state.messages.filter(m => m.role !== 'system');
         // keep last N messages (multiply by 2 because 1 interaction = user + assistant)
         const keptHistory = historyMsgs.slice(-(settings.contextSize * 2));
-        const apiMessages = [...systemMsgs, ...keptHistory];
+
+        // --- SillyTavern Style Injection ---
+        const emotionInstruction = buildEmotionInstruction();
+        const charName = settings.charName || 'Character';
+        const userName = 'User';
+        const rawNote = settings.authorsNote || '';
+        const authorsNote = rawNote.replace(/\{\{char\}\}/g, charName).replace(/\{\{user\}\}/g, userName);
+
+        let apiMessages = [];
+        // 1. Add foundational system message(s)
+        apiMessages.push(...systemMsgs);
+
+        // 2. Add history with injected Author's Note
+        if (keptHistory.length > 0) {
+            // Push history except the last message
+            apiMessages.push(...keptHistory.slice(0, -1));
+            
+            // Inject dynamic instructions (Author's Note + Emotion Rules)
+            apiMessages.push({
+                role: 'system',
+                content: (authorsNote ? `[Author's Note: ${authorsNote}]\n` : '') + emotionInstruction
+            });
+            
+            // Finally push the latest user message
+            apiMessages.push(keptHistory[keptHistory.length - 1]);
+        } else {
+            // Initial state (e.g. greeting)
+            apiMessages.push({
+                role: 'system',
+                content: (authorsNote ? `[Author's Note: ${authorsNote}]\n` : '') + emotionInstruction
+            });
+        }
 
         const resp = await fetch('/api/chat', {
             method: 'POST',

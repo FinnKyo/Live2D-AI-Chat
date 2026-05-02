@@ -33,7 +33,7 @@ function initParticles() {
 
 /* === Settings Management === */
 function loadSettings() {
-    const fields = ['api_url', 'api_key', 'model_name', 'custom_system_prompt', 'temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'max_tokens', 'context_size', 'n_choices', 'reasoning_effort', 'reply_length_limit', 'char_name', 'char_persona', 'world_scenario', 'char_greeting', 'user_persona'];
+    const fields = ['api_url', 'api_key', 'model_name', 'custom_system_prompt', 'temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'max_tokens', 'context_size', 'n_choices', 'reasoning_effort', 'reply_length_limit', 'char_name', 'char_persona', 'world_scenario', 'char_greeting', 'user_persona', 'authors_note'];
     fields.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -48,7 +48,7 @@ function loadSettings() {
 }
 
 function saveSettings() {
-    const fields = ['api_url', 'api_key', 'model_name', 'custom_system_prompt', 'temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'max_tokens', 'context_size', 'n_choices', 'reasoning_effort', 'reply_length_limit', 'char_name', 'char_persona', 'world_scenario', 'char_greeting', 'user_persona'];
+    const fields = ['api_url', 'api_key', 'model_name', 'custom_system_prompt', 'temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'max_tokens', 'context_size', 'n_choices', 'reasoning_effort', 'reply_length_limit', 'char_name', 'char_persona', 'world_scenario', 'char_greeting', 'user_persona', 'authors_note'];
     fields.forEach(id => {
         const el = document.getElementById(id);
         if (el) localStorage.setItem('galgame_' + id, el.value.trim());

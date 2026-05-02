@@ -42,6 +42,11 @@
                         <label for="user_persona">你的设定 (User Persona)</label>
                         <textarea id="user_persona" rows="3" placeholder="描述你自己的身份、外貌、性格等信息，以便AI更好地与你互动..."></textarea>
                     </div>
+                    <div class="form-group">
+                        <label for="authors_note">深度提示词 / 作者寄语 (Author's Note)</label>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem; margin-bottom: 0.5rem;">高优先级指令，将注入在对话末尾。适合放置如“始终以第三人称描写”、“强调角色心理活动”等强约束规则。</p>
+                        <textarea id="authors_note" rows="3" placeholder="例如：Always stay in character. Describe {{char}}'s actions and thoughts in detail."></textarea>
+                    </div>
                     <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
                         <button class="btn btn-primary btn-sm" id="btn-save">💾 保存设置</button>
                     </div>
