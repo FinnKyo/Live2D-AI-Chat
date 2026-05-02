@@ -366,7 +366,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     initChatEvents();
     initSizeSlider();
+    initUIPropagationStops();
 });
+
+/**
+ * 防止 UI 界面上的点击事件冒泡到 window，从而触发 Live2D 模型的点击事件
+ */
+function initUIPropagationStops() {
+    const uiSelectors = [
+        '.dialogue-box',
+        '.settings-drawer',
+        '.settings-drawer-overlay',
+        '.top-bar',
+        '.size-control',
+        '#chat-sessions-panel',
+        '.model-loading'
+    ];
+
+    uiSelectors.forEach(selector => {
+        const el = document.querySelector(selector);
+        if (el) {
+            ['click', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach(evtType => {
+                el.addEventListener(evtType, (e) => {
+                    e.stopPropagation();
+                });
+            });
+        }
+    });
+}
 
 function initSystemMessage() {
     const settings = getSettings();

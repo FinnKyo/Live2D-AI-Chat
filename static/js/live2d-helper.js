@@ -135,6 +135,7 @@ class Live2DHelper {
         });
 
         const onDragEnd = () => {
+            if (!this.isDragging) return;
             this.isDragging = false;
             if (!this.hasMoved) {
                 this.playEmotionMotion('tap');
