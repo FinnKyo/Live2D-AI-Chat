@@ -210,6 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const resp = await fetch('/api/characters');
         const characters = await resp.json();
         if (characters.length > 0) {
+            // Take the first character as the default
             const char = characters[0];
             state.charId = char.id;
             state.charName = char.name;
@@ -232,7 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dialogueName = document.getElementById('dialogue-name');
     if (dialogueName) dialogueName.textContent = state.charName;
 
-    // Force Start a New Session on each load
+    // Start a New Session on each load
     currentSessionId = Date.now().toString();
     state.history = [];
     state.messages = [];
@@ -318,10 +319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Init Live2D
     if (state.modelUrl) {
         state.live2d = new Live2DHelper('live2d-canvas');
-        console.log('Starting Live2D initialization...');
-        await state.live2d.init(state.modelUrl);
-    } else {
-        console.warn('No Live2D model found in live2d_characters directory');
+        await state.live2d.init(state.charId, state.modelUrl);
     }
 
     // Hide loading overlay

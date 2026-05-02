@@ -10,29 +10,31 @@ class Live2DHelper {
         this.app = null;
         this.model = null;
         this.ready = false;
+        this.charId = null;
         // User-adjustable scale multiplier (0.3 ~ 1.5)
         this.userScale = parseFloat(localStorage.getItem('galgame_model_scale') || '0.5');
 
         /**
-         * 表情 → 动作映射表 (从设置页面配置加载)
+         * 表情 → 动作映射表 (从后端 config.yml 加载)
          * key: 表情名称 (如 "happy", "angry")
-         * value: { group: "motionGroupName", index: 0 }
+         * value: { expression: "expName", group: "motionGroupName", index: 0 }
          */
         this.expressionMotionMap = {};
 
         /**
-         * 情感关键词 → 表情名称映射
-         * AI 回复中的 emotion tag 会映射到对应的表情
+         * 情感关键词 → 表情索引映射
          */
         this.emotionExpressionMap = {};
     }
 
-    async init(modelPath) {
+    async init(charId, modelPath) {
         const canvas = document.getElementById(this.canvasId);
         if (!canvas) {
             console.error('Canvas not found:', this.canvasId);
             return false;
         }
+
+        this.charId = charId;
 
         try {
             if (!this.app) {
@@ -48,7 +50,6 @@ class Live2DHelper {
                     autoDensity: true,
                 });
 
-                // Handle window resize ONLY ONCE
                 window.addEventListener('resize', () => this.onResize());
             }
 
@@ -71,11 +72,9 @@ class Live2DHelper {
             this.app.stage.addChild(this.model);
 
             this.onResize();
-
             this.ready = true;
-            console.log('Live2D model loaded successfully');
 
-            // Load expression-motion mapping from backend config.yml
+            // Load expression-motion mapping from backend
             await this.loadMappings();
 
             // Build emotion-to-expression map from model's expressions
@@ -93,9 +92,7 @@ class Live2DHelper {
 
     setupModel() {
         if (!this.model) return;
-        // Center and scale
         this.model.anchor.set(0.5, 0.5);
-        // Enable interaction
         this.model.interactive = true;
         this.model.buttonMode = true;
 
@@ -109,7 +106,6 @@ class Live2DHelper {
         this.model.on('pointerdown', (e) => {
             this.isDragging = true;
             this.hasMoved = false;
-            // Record the initial global coordinates
             this.dragStartX = e.data.global.x;
             this.dragStartY = e.data.global.y;
         });
@@ -119,7 +115,6 @@ class Live2DHelper {
                 const dx = e.data.global.x - this.dragStartX;
                 const dy = e.data.global.y - this.dragStartY;
                 
-                // If moved more than 5 pixels, consider it a drag
                 if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
                     this.hasMoved = true;
                 }
@@ -129,15 +124,13 @@ class Live2DHelper {
                 this.dragStartX = e.data.global.x;
                 this.dragStartY = e.data.global.y;
                 
-                this.onResize(); // Re-apply position
+                this.onResize();
             }
         });
 
         const onDragEnd = () => {
             this.isDragging = false;
-            // If it was a click without dragging, trigger 'tap'
             if (!this.hasMoved) {
-                console.log('Character clicked/tapped');
                 this.playEmotionMotion('tap');
             }
         };
@@ -151,20 +144,14 @@ class Live2DHelper {
         const w = window.innerWidth;
         const h = window.innerHeight;
 
-        // Base scale calculation, then multiply by user scale
         const baseScale = Math.min(w / 1000, h / 1200);
         const scale = baseScale * this.userScale;
         this.model.scale.set(scale);
 
-        // Position: center + offset
         this.model.x = w / 2 + (this.offsetX || 0);
         this.model.y = h * 0.5 + (this.offsetY || 0);
     }
 
-    /**
-     * Set model scale (0.3 ~ 1.5)
-     * @param {number} scale
-     */
     setScale(scale) {
         this.userScale = Math.max(0.3, Math.min(1.5, scale));
         localStorage.setItem('galgame_model_scale', this.userScale.toString());
@@ -179,36 +166,19 @@ class Live2DHelper {
      * 加载表情-动作映射配置
      */
     async loadMappings() {
-        const charId = localStorage.getItem('galgame_character');
-        if (!charId) return;
+        if (!this.charId) return;
 
         try {
-            // 首先尝试从后端获取 config.yml 的配置
-            const resp = await fetch(`/api/mappings/${charId}`);
+            const resp = await fetch(`/api/mappings/${this.charId}`);
             const mappings = await resp.json();
             
             if (mappings && Object.keys(mappings).length > 0) {
-                // Convert mapping config to helper's internal format
                 this.expressionMotionMap = {};
                 this.parseMappingData(mappings);
-                console.log('Loaded mappings from backend config.yml:', this.expressionMotionMap);
-            } else {
-                // 如果后端没有配置，尝试回退到 localStorage (兼容旧版本)
-                const saved = localStorage.getItem(`galgame_mapping_${charId}`);
-                if (saved) {
-                    // ... (保持原有的解析逻辑，或者简单合并)
-                    const localMappings = JSON.parse(saved);
-                    // (此处省略详细解析逻辑以节省篇幅，实际应用中可以复用上面的循环)
-                    this.parseMappingData(localMappings);
-                }
+                console.log('Loaded mappings from backend:', this.expressionMotionMap);
             }
         } catch (e) {
             console.warn('Failed to load mappings from backend:', e);
-            // Error fallback: try localStorage
-            try {
-                const saved = localStorage.getItem(`galgame_mapping_${charId}`);
-                if (saved) this.parseMappingData(JSON.parse(saved));
-            } catch (e2) {}
         }
     }
 
@@ -253,14 +223,12 @@ class Live2DHelper {
     buildEmotionExpressionMap() {
         if (!this.model || !this.model.internalModel) return;
 
-        // 获取模型的表情列表
         try {
             const settings = this.model.internalModel.settings;
             const expressions = settings.expressions || [];
 
             this.emotionExpressionMap = {};
             expressions.forEach((exp, index) => {
-                // 从文件名提取表情名
                 const name = (exp.Name || exp.name || '').replace('.exp3.json', '').toLowerCase();
                 if (name) {
                     this.emotionExpressionMap[name] = index;
@@ -281,10 +249,6 @@ class Live2DHelper {
         }
     }
 
-    /**
-     * 设置表情
-     * @param {number} index - 表情索引
-     */
     setExpression(index) {
         if (!this.model || !this.ready) return;
         try {
@@ -296,54 +260,35 @@ class Live2DHelper {
 
     /**
      * 根据情感标签播放对应的表情和动作
-     * @param {string} emotion - 情感关键词 (如 'happy', 'angry' 等)
-     * @returns {string} 实际使用的情感关键词
+     * @param {string} emotion - 情感关键词
      */
     playEmotionMotion(emotion) {
         if (!this.model || !this.ready) return 'neutral';
 
         const key = (emotion || 'neutral').toLowerCase().trim();
-        console.log(`Processing emotion: "${key}"`);
-
         const mapping = this.expressionMotionMap[key];
 
-        // 1. Strict Expression Mapping
+        // 1. Expression Mapping
         if (mapping && mapping.expression) {
             const targetExpIndex = this.emotionExpressionMap[mapping.expression];
             if (targetExpIndex !== undefined) {
-                console.log(`Setting mapped expression: ${mapping.expression} (index: ${targetExpIndex})`);
                 this.setExpression(targetExpIndex);
-            } else {
-                console.warn(`Mapped expression not found: ${mapping.expression}`);
             }
-        } else {
-            console.log(`No expression mapped for emotion: "${key}"`);
         }
 
-        // 2. Strict Motion Mapping
+        // 2. Motion Mapping
         if (mapping && mapping.group !== null && mapping.index !== null && mapping.group !== undefined) {
-            console.log(`Playing mapped motion: ${mapping.group}[${mapping.index}]`);
             this.playMotion(mapping.group, mapping.index);
             return key;
         } else {
-            // Default motion if no explicit motion is mapped
-            console.log(`Emotion "${key}" not mapped to a motion, using default motion`);
-        try {
-            // Try to play a motion from the default group (empty string key or "Idle")
-            this.playMotion('', Math.floor(Math.random() * 3));
-        } catch (e) {
-            this.playMotion('Idle', 0);
+            // Default motion
+            try {
+                this.playMotion('', Math.floor(Math.random() * 3));
+            } catch (e) {
+                this.playMotion('Idle', 0);
+            }
+            return key;
         }
-
-        return key;
-    }
-    }
-
-    /**
-     * 获取所有支持的表情列表
-     */
-    getSupportedEmotions() {
-        return Object.keys(this.emotionExpressionMap);
     }
 
     destroy() {
@@ -356,5 +301,4 @@ class Live2DHelper {
     }
 }
 
-// Export as global
 window.Live2DHelper = Live2DHelper;

@@ -40,7 +40,6 @@ def get_all_characters():
                     "name": name,
                     "path": char_dir,
                     "model_json": model_json,
-                    "builtin": True,
                 })
 
     return characters
@@ -49,11 +48,6 @@ def get_all_characters():
 def find_model_json(directory):
     """在目录中查找 .model3.json 文件"""
     return next((f for f in os.listdir(directory) if f.endswith(".model3.json")), None)
-
-
-def find_thumbnail(directory):
-    """在目录中查找缩略图"""
-    return next((f for f in os.listdir(directory) if "thumbnail" in f.lower() and f.endswith(".png")), None)
 
 
 def load_mappings():
@@ -86,13 +80,11 @@ def api_characters():
     for char in characters:
         char_id = char["id"]
         model_json = char["model_json"]
-        thumbnail = find_thumbnail(char["path"])
 
         results.append({
             "id": char_id,
             "name": char["name"],
             "model_url": f"/live2d_characters/{char_id}/{model_json}",
-            "thumbnail": f"/live2d_characters/{char_id}/{thumbnail}" if thumbnail else None,
         })
     return jsonify(results)
 
