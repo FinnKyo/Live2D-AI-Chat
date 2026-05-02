@@ -35,17 +35,29 @@ class Live2DHelper {
         }
 
         try {
-            // Initialize PixiJS Application
-            this.app = new PIXI.Application({
-                view: canvas,
-                autoStart: true,
-                resizeTo: window,
-                transparent: true,
-                backgroundAlpha: 0,
-                antialias: true,
-                resolution: window.devicePixelRatio || 1,
-                autoDensity: true,
-            });
+            if (!this.app) {
+                // Initialize PixiJS Application
+                this.app = new PIXI.Application({
+                    view: canvas,
+                    autoStart: true,
+                    resizeTo: window,
+                    transparent: true,
+                    backgroundAlpha: 0,
+                    antialias: true,
+                    resolution: window.devicePixelRatio || 1,
+                    autoDensity: true,
+                });
+
+                // Handle window resize ONLY ONCE
+                window.addEventListener('resize', () => this.onResize());
+            }
+
+            // Remove old model if it exists
+            if (this.model) {
+                this.app.stage.removeChild(this.model);
+                this.model.destroy();
+                this.model = null;
+            }
 
             // Load Live2D model
             console.log('Loading Live2D model from:', modelPath);
@@ -58,8 +70,6 @@ class Live2DHelper {
             this.setupModel();
             this.app.stage.addChild(this.model);
 
-            // Handle window resize
-            window.addEventListener('resize', () => this.onResize());
             this.onResize();
 
             this.ready = true;

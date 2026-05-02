@@ -92,6 +92,32 @@ def api_get_mappings(char_id):
     return jsonify(char_mappings)
 
 
+@app.route("/api/characters", methods=["GET"])
+def api_characters():
+    """获取所有角色及其模型路径的列表"""
+    characters = get_all_characters()
+    results = []
+    for char in characters:
+        char_id = char["id"]
+        model_json = char["model_json"]
+        thumbnail = find_thumbnail(char["path"])
+
+        results.append({
+            "id": char_id,
+            "name": char["name"],
+            "model_url": f"/live2d_characters/{char_id}/{model_json}",
+            "thumbnail": f"/live2d_characters/{char_id}/{thumbnail}" if thumbnail else None,
+        })
+    return jsonify(results)
+
+
+@app.route("/live2d/<path:filename>")
+@app.route("/live2d_characters/<path:filename>")
+def serve_character_files(filename):
+    """为 Live2D 模型文件提供静态资源路由"""
+    return send_from_directory(CHARACTERS_DIR, filename)
+
+
 # ============================================================
 # AI API 代理
 # ============================================================
@@ -188,6 +214,12 @@ def api_models():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/", methods=["GET"])
+def index():
+    """主页路由"""
+    return render_template("chat.html")
 
 
 if __name__ == "__main__":

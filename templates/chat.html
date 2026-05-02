@@ -58,7 +58,6 @@
             
             <div class="drawer-tabs">
                 <button class="tab-btn active" data-tab="tab-api">API</button>
-                <button class="tab-btn" data-tab="tab-character">角色</button>
                 <button class="tab-btn" data-tab="tab-prompt">提示词</button>
                 <button class="tab-btn" data-tab="tab-display">显示</button>
             </div>
@@ -93,50 +92,41 @@
                     <div class="status-msg" id="settings-status"></div>
                 </div>
 
-                <!-- Character Tab -->
-                <div class="tab-panel" id="tab-character">
-                    <div class="form-group">
-                        <label>选择角色模型</label>
-                        <div id="character-list" class="character-grid-mini">
-                            <!-- Loaded dynamically -->
-                        </div>
-                    </div>
+                <!-- Prompt Tab -->
+                <div class="tab-panel" id="tab-prompt">
                     <div class="form-group">
                         <label for="char_name">角色显示名称</label>
                         <input type="text" id="char_name" placeholder="角色名字...">
                     </div>
                     <div class="form-group">
-                        <label for="char_persona">角色描述 (Persona)</label>
-                        <textarea id="char_persona" rows="4" placeholder="角色性格、背景..."></textarea>
-                    </div>
-                    <div class="form-group">
                         <label for="char_greeting">开场白</label>
                         <textarea id="char_greeting" rows="2" placeholder="角色的第一句话..."></textarea>
                     </div>
-                    <button class="btn btn-primary btn-sm w-100" id="btn-save-char">💾 保存角色信息</button>
-                    <div class="status-msg" id="char-info-status"></div>
-                </div>
-
-                <!-- Prompt Tab -->
-                <div class="tab-panel" id="tab-prompt">
                     <div class="form-group">
-                        <label for="custom_system_prompt">全局系统提示词</label>
+                        <label for="char_persona">角色性格设定 (Persona)</label>
+                        <textarea id="char_persona" rows="4" placeholder="例如：性格活泼、爱好学习的 AI 助手..."></textarea>
+                    </div>
+                    <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 1rem 0;">
+                    <div class="form-group">
+                        <label for="custom_system_prompt">全局系统提示词 (System Prompt)</label>
                         <textarea id="custom_system_prompt" rows="4"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="world_scenario">世界观/场景</label>
+                        <label for="world_scenario">世界观/对话场景</label>
                         <textarea id="world_scenario" rows="2"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="user_persona">你的设定</label>
+                        <label for="user_persona">你的身份设定</label>
                         <textarea id="user_persona" rows="2"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="authors_note">深度提示词 (Author's Note)</label>
+                        <label for="authors_note">深度指令 (Author's Note)</label>
                         <textarea id="authors_note" rows="2"></textarea>
                     </div>
-                    <button class="btn btn-primary btn-sm w-100" id="btn-save-prompt">💾 保存提示词</button>
+                    <button class="btn btn-primary btn-sm w-100" id="btn-save-prompt">💾 保存所有配置</button>
+                    <div class="status-msg" id="prompt-status"></div>
                 </div>
+
 
                 <!-- Display Tab -->
                 <div class="tab-panel" id="tab-display">

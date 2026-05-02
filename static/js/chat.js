@@ -1,7 +1,6 @@
 /**
  * AI Live2D Galgame - 对话界面逻辑
  * 处理 AI 对话、打字机效果、情感动作触发和历史记录
- * 支持动态角色和表情-动作映射
  */
 
 // === State ===
@@ -20,23 +19,7 @@ const state = {
 
 // === Build emotion instruction from character's expressions ===
 function buildEmotionInstruction() {
-    // Get character's available expressions from stored data
-    const charId = localStorage.getItem('galgame_character');
     let expressionsSet = new Set();
-
-    try {
-        // Try to get from cached character data
-        const cachedChars = localStorage.getItem('galgame_characters_cache');
-        if (cachedChars) {
-            const chars = JSON.parse(cachedChars);
-            const char = chars.find(c => c.id === charId);
-            if (char && char.expressions) {
-                char.expressions.forEach(e => expressionsSet.add(e.display));
-            }
-        }
-    } catch (e) {
-        console.warn('Failed to load expressions for emotion instruction:', e);
-    }
 
     // Add mapped emotions from Live2D helper
     if (state.live2d && state.live2d.expressionMotionMap) {
@@ -68,10 +51,10 @@ function getSettings() {
         apiUrl: localStorage.getItem('galgame_api_url') || '',
         apiKey: localStorage.getItem('galgame_api_key') || '',
         model: localStorage.getItem('galgame_model_name') || 'gpt-3.5-turbo',
-        charName: (localStorage.getItem('galgame_character') ? localStorage.getItem(`galgame_char_name_${localStorage.getItem('galgame_character')}`) : null) || localStorage.getItem('galgame_char_name') || 'Character',
-        charPersona: (localStorage.getItem('galgame_character') ? localStorage.getItem(`galgame_char_persona_${localStorage.getItem('galgame_character')}`) : null) || localStorage.getItem('galgame_char_persona') || '',
+        charName: state.charName || 'Character',
+        charPersona: localStorage.getItem('galgame_char_persona') || '',
         worldScenario: localStorage.getItem('galgame_world_scenario') || '',
-        charGreeting: (localStorage.getItem('galgame_character') ? localStorage.getItem(`galgame_char_greeting_${localStorage.getItem('galgame_character')}`) : null) || localStorage.getItem('galgame_char_greeting') || '你好呀！',
+        charGreeting: localStorage.getItem('galgame_char_greeting') || '你好呀！',
         userPersona: localStorage.getItem('galgame_user_persona') || '',
         customSystemPrompt: localStorage.getItem('galgame_custom_system_prompt') || '',
         temperature: parseFloat(localStorage.getItem('galgame_temperature')) || 1.0,
@@ -83,8 +66,7 @@ function getSettings() {
         n_choices: parseInt(localStorage.getItem('galgame_n_choices'), 10) || 1,
         chatBackground: localStorage.getItem('galgame_chat_background') || '',
         dialogueOpacity: localStorage.getItem('galgame_dialogue_opacity') || '0.75',
-        modelUrl: localStorage.getItem('galgame_model_url') || '',
-        charId: localStorage.getItem('galgame_character') || '',
+        modelUrl: state.modelUrl || '',
         authorsNote: localStorage.getItem('galgame_authors_note') || '',
     };
 }
@@ -152,18 +134,8 @@ function initSettingsDrawer() {
 
     document.getElementById('btn-test-api').addEventListener('click', testConnection);
 
-    document.getElementById('btn-save-char').addEventListener('click', () => {
-        const fields = ['char_name', 'char_persona', 'char_greeting'];
-        saveSettings(fields);
-        
-        // Update per-character storage if a character is selected
-        const charId = localStorage.getItem('galgame_character');
-        if (charId) {
-            fields.forEach(f => {
-                const el = document.getElementById(f);
-                if (el) localStorage.setItem(`galgame_${f}_${charId}`, el.value.trim());
-            });
-        }
+    document.getElementById('btn-save-prompt').addEventListener('click', () => {
+        saveSettings(['char_name', 'char_greeting', 'char_persona', 'custom_system_prompt', 'world_scenario', 'user_persona', 'authors_note']);
         
         // Update current state and UI
         state.charName = document.getElementById('char_name').value || 'Character';
@@ -172,13 +144,8 @@ function initSettingsDrawer() {
         const dialogueName = document.getElementById('dialogue-name');
         if (dialogueName) dialogueName.textContent = state.charName;
 
-        showStatus('char-info-status', '✓ 角色信息已保存', 'success');
-    });
-
-    document.getElementById('btn-save-prompt').addEventListener('click', () => {
-        saveSettings(['custom_system_prompt', 'world_scenario', 'user_persona', 'authors_note']);
         initSystemMessage();
-        alert('提示词已更新');
+        showStatus('prompt-status', '✓ 所有配置已保存', 'success');
     });
 }
 
@@ -191,7 +158,7 @@ function saveSettings(fields) {
 
 function loadDrawerContent() {
     // Load all fields from localStorage
-    const fields = ['api_url', 'api_key', 'model_name', 'temperature', 'max_tokens', 'char_name', 'char_persona', 'char_greeting', 'custom_system_prompt', 'world_scenario', 'user_persona', 'authors_note', 'chat_background_input'];
+    const fields = ['api_url', 'api_key', 'model_name', 'temperature', 'max_tokens', 'char_name', 'char_greeting', 'char_persona', 'custom_system_prompt', 'world_scenario', 'user_persona', 'authors_note', 'chat_background_input'];
     fields.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -199,78 +166,7 @@ function loadDrawerContent() {
             if (saved) el.value = saved;
         }
     });
-    
-    // Load character list
-    loadCharactersInDrawer();
 }
-
-async function loadCharactersInDrawer() {
-    const list = document.getElementById('character-list');
-    if (!list) return;
-
-    try {
-        const resp = await fetch('/api/characters');
-        const characters = await resp.json();
-        const currentId = localStorage.getItem('galgame_character');
-
-        list.innerHTML = characters.map(c => `
-            <div class="char-item-mini ${c.id === currentId ? 'active' : ''}" onclick="selectCharacterMini('${c.id}', '${c.model_url}', '${c.name}')">
-                <img src="${c.thumbnail || '/static/img/default_avatar.png'}" class="char-thumb-mini" onerror="this.src='/static/img/default_avatar.png'">
-                <span class="char-name-mini">${escapeHtml(c.name)}</span>
-            </div>
-        `).join('');
-    } catch (e) {
-        list.innerHTML = '加载角色失败';
-    }
-}
-
-window.selectCharacterMini = async function(id, modelUrl, name) {
-    if (localStorage.getItem('galgame_character') === id) return;
-
-    localStorage.setItem('galgame_character', id);
-    localStorage.setItem('galgame_model_url', modelUrl);
-    
-    // Load per-character info if available
-    const fields = ['char_name', 'char_persona', 'char_greeting'];
-    fields.forEach(f => {
-        const saved = localStorage.getItem(`galgame_${f}_${id}`);
-        const el = document.getElementById(f);
-        if (el) el.value = saved || (f === 'char_name' ? name : '');
-    });
-
-    // Highlight in UI
-    document.querySelectorAll('.char-item-mini').forEach(item => {
-        item.classList.toggle('active', item.innerText.includes(name));
-    });
-
-    // Reload model
-    if (state.live2d) {
-        const loadingEl = document.getElementById('model-loading');
-        if (loadingEl) {
-            loadingEl.style.display = 'flex';
-            loadingEl.classList.remove('hidden');
-        }
-        
-        const success = await state.live2d.init(modelUrl);
-        
-        if (loadingEl) {
-            loadingEl.classList.add('hidden');
-            setTimeout(() => loadingEl.style.display = 'none', 600);
-        }
-        
-        if (success) {
-            // Update UI name
-            state.charName = document.getElementById('char_name').value || name;
-            state.charId = id;
-            document.getElementById('char-name-tag').textContent = `${state.charName} · AI 对话`;
-            document.getElementById('dialogue-name').textContent = state.charName;
-            
-            // Re-init system prompt with new character
-            initSystemMessage();
-            cacheCharacterData(id);
-        }
-    }
-};
 
 async function testConnection() {
     const url = document.getElementById('api_url').value.trim();
@@ -308,36 +204,38 @@ function showStatus(id, msg, type) {
 // === Init ===
 document.addEventListener('DOMContentLoaded', async () => {
     initSettingsDrawer();
+    
+    // Auto-load characters
+    try {
+        const resp = await fetch('/api/characters');
+        const characters = await resp.json();
+        if (characters.length > 0) {
+            const char = characters[0];
+            state.charId = char.id;
+            state.charName = char.name;
+            state.modelUrl = char.model_url;
+        }
+    } catch (e) {
+        console.error('Failed to load characters:', e);
+    }
+
     const settings = getSettings();
     if (!settings.apiUrl || !settings.apiKey) {
         alert('请先配置 API 信息以开始对话');
-        // Open settings drawer
-        document.getElementById('btn-settings').click();
-    }
-
-    if (!settings.modelUrl) {
-        // If no model, also open settings
         document.getElementById('btn-settings').click();
     }
 
     // Set character name in UI
-    state.charName = settings.charName;
-    state.charId = settings.charId;
     const charNameTag = document.getElementById('char-name-tag');
     if (charNameTag) charNameTag.textContent = `${state.charName} · AI 对话`;
 
     const dialogueName = document.getElementById('dialogue-name');
     if (dialogueName) dialogueName.textContent = state.charName;
 
-    // Cache character data for emotion instruction
-    await cacheCharacterData(settings.charId);
-
-    // Load Last Session
     // Force Start a New Session on each load
     currentSessionId = Date.now().toString();
     state.history = [];
     state.messages = [];
-    localStorage.setItem(`galgame_last_session_${state.charId}`, currentSessionId);
 
     // Set custom background
     const bgEl = document.querySelector('.game-bg');
@@ -353,8 +251,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         dialogueBox.style.setProperty('--box-opacity', settings.dialogueOpacity);
     }
     
-    // Background and opacity settings
-    const btnSettings = document.getElementById('btn-settings');
     const opacitySlider = document.getElementById('chat_opacity_slider');
     const opacityDisplay = document.getElementById('opacity_val_display');
     const bgInput = document.getElementById('chat_background_input');
@@ -366,8 +262,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (bgEl) {
                 if (val) {
                     bgEl.style.backgroundImage = `url(${val})`;
-                    bgEl.style.backgroundSize = 'cover';
-                    bgEl.style.backgroundPosition = 'center';
                 } else {
                     bgEl.style.backgroundImage = 'none';
                 }
@@ -376,17 +270,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    const sessionsPanel = document.getElementById('chat-sessions-panel');
-
-    if (btnSettings && opacitySlider) {
-        // btnSettings already toggles drawer via initSettingsDrawer, 
-        // this block is primarily for opacity and background live updates.
-        
-        // Initialize slider value
+    if (opacitySlider) {
         opacitySlider.value = settings.dialogueOpacity;
         if (opacityDisplay) opacityDisplay.textContent = settings.dialogueOpacity;
-
-        // Listen for realtime changes
         opacitySlider.addEventListener('input', (e) => {
             const val = e.target.value;
             if (opacityDisplay) opacityDisplay.textContent = val;
@@ -399,12 +285,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Sessions Panel
     const btnSessions = document.getElementById('btn-sessions');
+    const sessionsPanel = document.getElementById('chat-sessions-panel');
     const btnNewSession = document.getElementById('btn-new-session');
 
     if (btnSessions && sessionsPanel) {
         btnSessions.addEventListener('click', () => {
             sessionsPanel.style.display = sessionsPanel.style.display === 'none' ? 'block' : 'none';
-            if (settingsPanel) settingsPanel.style.display = 'none';
             renderSessions();
         });
     }
@@ -429,22 +315,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Init Live2D with Timeout Guard
-    if (settings.modelUrl) {
+    // Init Live2D
+    if (state.modelUrl) {
         state.live2d = new Live2DHelper('live2d-canvas');
-        
-        // Create a 5-second timeout promise
-        const initPromise = state.live2d.init(settings.modelUrl);
-        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(false), 5000));
-        
         console.log('Starting Live2D initialization...');
-        const success = await Promise.race([initPromise, timeoutPromise]);
-        
-        if (!success) {
-            console.warn('Live2D model failed to load or timed out, continuing without it');
-        }
+        await state.live2d.init(state.modelUrl);
     } else {
-        console.warn('No Live2D model URL found in settings');
+        console.warn('No Live2D model found in live2d_characters directory');
     }
 
     // Hide loading overlay
@@ -479,7 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Show welcome message with greeting emotion
+    // Show welcome message
     if (state.history.length === 0) {
         if (state.live2d && state.live2d.ready) {
             state.live2d.playEmotionMotion('happy');
@@ -489,18 +366,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         showDialogue(state.charName, settings.charGreeting, false, 'happy');
     }
 
-    // Setup event listeners
     initChatEvents();
-
-    // Setup size slider
     initSizeSlider();
 });
 
 function initSystemMessage() {
     const settings = getSettings();
-    
     let globalPrompt = settings.customSystemPrompt || "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}.";
-    const charName = settings.charName || 'Character';
+    const charName = state.charName || 'Character';
     const userName = 'User';
 
     const replaceMacros = (text) => {
@@ -509,7 +382,6 @@ function initSystemMessage() {
     };
 
     globalPrompt = replaceMacros(globalPrompt);
-
     let fullSystemPrompt = globalPrompt + '\n';
 
     if (settings.charPersona) {
@@ -522,10 +394,7 @@ function initSystemMessage() {
         fullSystemPrompt += `\n[User Persona]\n${replaceMacros(settings.userPersona)}\n`;
     }
 
-    // Remove any existing system messages to avoid duplication
     state.messages = state.messages.filter(m => m.role !== 'system');
-
-    // Prepend the updated foundational system message
     state.messages.unshift({
         role: 'system',
         content: fullSystemPrompt,
@@ -544,21 +413,18 @@ function renderDialogueHistory() {
             <div class="history-content">${formatMarkdown(msg.content)}</div>
         </div>
     `).join('');
-    
-    // Scroll to bottom
     hist.scrollTop = hist.scrollHeight;
 }
 
 function saveSession() {
-    const settings = getSettings();
     if (state.history.length === 0) return;
 
     if (!currentSessionId) {
         currentSessionId = Date.now().toString();
     }
-    localStorage.setItem(`galgame_last_session_${settings.charId}`, currentSessionId);
+    localStorage.setItem(`galgame_last_session_${state.charId}`, currentSessionId);
 
-    let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + settings.charId) || '[]');
+    let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + state.charId) || '[]');
     const existingIndex = sessions.findIndex(s => s.id === currentSessionId);
     const sessionObj = {
         id: currentSessionId,
@@ -572,14 +438,13 @@ function saveSession() {
     } else {
         sessions.push(sessionObj);
     }
-    localStorage.setItem('galgame_sessions_' + settings.charId, JSON.stringify(sessions));
+    localStorage.setItem('galgame_sessions_' + state.charId, JSON.stringify(sessions));
 }
 
 function renderSessions() {
-    const settings = getSettings();
     const list = document.getElementById('sessions-list');
     if (!list) return;
-    let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + settings.charId) || '[]');
+    let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + state.charId) || '[]');
     
     if (sessions.length === 0) {
         list.innerHTML = '<div style="color:#888; text-align:center; padding: 1rem 0;">暂无对话记录</div>';
@@ -599,12 +464,10 @@ window.deleteSession = function(id, event) {
     event.stopPropagation();
     if (!confirm('确定要删除这条对话记录吗？')) return;
     
-    const settings = getSettings();
-    let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + settings.charId) || '[]');
+    let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + state.charId) || '[]');
     sessions = sessions.filter(s => s.id !== id);
-    localStorage.setItem('galgame_sessions_' + settings.charId, JSON.stringify(sessions));
+    localStorage.setItem('galgame_sessions_' + state.charId, JSON.stringify(sessions));
     
-    // If the active session is deleted, reset the chat
     if (currentSessionId === id) {
         currentSessionId = Date.now().toString();
         state.history = [];
@@ -615,13 +478,11 @@ window.deleteSession = function(id, event) {
             textEl.innerHTML = '<i>(新对话已开启)</i>';
         }
     }
-    
     renderSessions();
 }
 
 window.loadSession = function(id) {
-    const settings = getSettings();
-    let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + settings.charId) || '[]');
+    let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + state.charId) || '[]');
     const s = sessions.find(x => x.id === id);
     if (s) {
         currentSessionId = id;
@@ -635,7 +496,6 @@ window.loadSession = function(id) {
         
         document.getElementById('chat-sessions-panel').style.display = 'none';
         
-        // Trigger motion if last msg is assistant
         if (state.history.length > 0 && state.history[state.history.length - 1].role === 'assistant') {
             const rawText = state.history[state.history.length - 1].content;
             const expRegex = /\[emotion:\s*([^\]]+)\]/i;
@@ -648,18 +508,6 @@ window.loadSession = function(id) {
     }
 };
 
-// Cache character data for building emotion instructions
-async function cacheCharacterData(charId) {
-    if (!charId) return;
-    try {
-        const resp = await fetch('/api/characters');
-        const chars = await resp.json();
-        localStorage.setItem('galgame_characters_cache', JSON.stringify(chars));
-    } catch (e) {
-        console.warn('Failed to cache character data:', e);
-    }
-}
-
 // === Size Slider ===
 function initSizeSlider() {
     const sliders = document.querySelectorAll('.size-slider');
@@ -670,7 +518,6 @@ function initSizeSlider() {
     const currentScale = state.live2d.getScale();
     const percentStr = Math.round(currentScale * 100) + '%';
 
-    // Set initial values
     sliders.forEach(s => s.value = currentScale);
     valueEls.forEach(v => v.textContent = percentStr);
 
@@ -678,10 +525,7 @@ function initSizeSlider() {
         slider.addEventListener('input', () => {
             const val = parseFloat(slider.value);
             state.live2d.setScale(val);
-            
             const newPercentStr = Math.round(val * 100) + '%';
-            
-            // Sync all sliders and labels
             sliders.forEach(s => { if (s !== slider) s.value = val; });
             valueEls.forEach(v => v.textContent = newPercentStr);
         });
@@ -690,7 +534,6 @@ function initSizeSlider() {
 
 // === Event Listeners ===
 function initChatEvents() {
-    // Input enter key
     const input = document.getElementById('chat-input');
     const sendBtn = document.getElementById('btn-send');
     
@@ -706,7 +549,6 @@ function initChatEvents() {
         sendBtn.addEventListener('click', sendMessage);
     }
 
-    // Click dialogue to skip typewriter
     const dialogueBox = document.querySelector('.dialogue-box');
     if (dialogueBox) {
         dialogueBox.addEventListener('click', (e) => {
@@ -725,54 +567,37 @@ async function sendMessage() {
     if (!text || state.isWaitingAPI) return;
 
     input.value = '';
-
-    // Add user message
     state.messages.push({ role: 'user', content: text });
     state.history.push({ role: 'user', content: text });
-
-    // 5. Save session
     saveSession();
 
-    // Show loading
     state.isWaitingAPI = true;
     updateSendButton(true);
     showDialogue(state.charName, null, true);
 
     try {
         const settings = getSettings();
-        
-        // Limit context size
         const systemMsgs = state.messages.filter(m => m.role === 'system');
         const historyMsgs = state.messages.filter(m => m.role !== 'system');
-        // keep last N messages (multiply by 2 because 1 interaction = user + assistant)
         const keptHistory = historyMsgs.slice(-(settings.contextSize * 2));
 
-        // --- SillyTavern Style Injection ---
         const emotionInstruction = buildEmotionInstruction();
-        const charName = settings.charName || 'Character';
+        const charName = state.charName || 'Character';
         const userName = 'User';
         const rawNote = settings.authorsNote || '';
         const authorsNote = rawNote.replace(/\{\{char\}\}/g, charName).replace(/\{\{user\}\}/g, userName);
 
         let apiMessages = [];
-        // 1. Add foundational system message(s)
         apiMessages.push(...systemMsgs);
 
-        // 2. Add history with injected Author's Note
         if (keptHistory.length > 0) {
-            // Push history except the last message
             apiMessages.push(...keptHistory.slice(0, -1));
-            
-            // Inject dynamic instructions (Author's Note + Emotion Rules)
             apiMessages.push({
                 role: 'system',
                 content: (authorsNote ? `[Author's Note: ${authorsNote}]\n` : '') + emotionInstruction
             });
-            
-            // Finally push the latest user message
             apiMessages.push(keptHistory[keptHistory.length - 1]);
         } else {
-            // Initial state (e.g. greeting)
             apiMessages.push({
                 role: 'system',
                 content: (authorsNote ? `[Author's Note: ${authorsNote}]\n` : '') + emotionInstruction
@@ -803,21 +628,15 @@ async function sendMessage() {
         }
 
         const rawReply = data.choices?.[0]?.message?.content || '(无回复)';
-
-        // Parse emotion tag from reply
         const { emotion, text: cleanReply } = parseEmotionTag(rawReply);
 
-        // Store the raw reply in messages (with tag) for context continuity
         state.messages.push({ role: 'assistant', content: rawReply });
         state.history.push({ role: 'assistant', content: cleanReply });
 
-        // Play emotion-based motion and expression
         let resolvedEmotion = emotion;
         if (state.live2d && state.live2d.ready) {
             resolvedEmotion = state.live2d.playEmotionMotion(emotion);
         }
-
-        // Show reply with typewriter effect + emotion tag
         showDialogue(state.charName, cleanReply, false, resolvedEmotion);
 
     } catch (error) {
@@ -835,11 +654,8 @@ function showDialogue(name, text, isLoading, emotion) {
     const emotionEl = document.querySelector('.emotion-tag');
 
     if (nameEl) nameEl.textContent = name;
-
-    // 3. Save session
     saveSession();
 
-    // 4. Update display text (trim emotion tag for UI)
     if (emotionEl) {
         if (emotion && emotion !== 'neutral') {
             emotionEl.textContent = `[${emotion}]`;
@@ -854,30 +670,21 @@ function showDialogue(name, text, isLoading, emotion) {
             textEl.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
         }
         if (continueEl) continueEl.style.display = 'none';
-        if (emotionEl) emotionEl.style.display = 'none';
         return;
     }
 
-    // Clear loading dots
     if (textEl) textEl.innerHTML = '';
-
     if (!text) text = '(无回复)';
 
-    if (textEl) textEl.innerHTML = formatMarkdown(text);
-    if (continueEl) continueEl.style.display = 'none'; // Optional to display block if waiting
-
-    // If history is currently expanded, re-render it to show new message
     const dialogueBox = document.querySelector('.dialogue-box');
     if (dialogueBox && dialogueBox.classList.contains('expanded')) {
         renderDialogueHistory();
     }
 
-    // Typewriter effect
     if (textEl) {
         textEl.textContent = '';
         if (continueEl) continueEl.style.display = 'none';
         state.isTyping = true;
-
         typeWriter(text, textEl, 40).then(() => {
             state.isTyping = false;
             if (continueEl) continueEl.style.display = 'block';
@@ -903,7 +710,6 @@ function typeWriter(text, element, speed = 40) {
             if (i < text.length) {
                 element.textContent += text.charAt(i);
                 i++;
-                // Pause longer at punctuation
                 const ch = text.charAt(i - 1);
                 const delay = '。！？、，；'.includes(ch) ? speed * 3 :
                               '.,!?;'.includes(ch) ? speed * 2 : speed;
@@ -913,7 +719,6 @@ function typeWriter(text, element, speed = 40) {
                 resolve();
             }
         }
-
         tick();
     });
 }
@@ -924,7 +729,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// === UI Helpers ===
 function updateSendButton(disabled) {
     const btn = document.getElementById('btn-send');
     if (btn) btn.disabled = disabled;
