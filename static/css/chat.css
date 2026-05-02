@@ -266,7 +266,7 @@
 }
 
 .send-btn {
-    background: linear-gradient(135deg, #6c5ce7, #a855f7);
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     border: none;
     color: #fff;
     width: 42px;

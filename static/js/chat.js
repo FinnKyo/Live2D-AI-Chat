@@ -586,8 +586,6 @@ async function sendMessage() {
     }
 }
 
-// === Emotion Label Map (Removed) ===
-// We now strictly use the raw emotion tag for consistency with user settings
 function showDialogue(name, text, isLoading, emotion) {
     const nameEl = document.querySelector('.dialogue-name');
     const textEl = document.querySelector('.dialogue-text');

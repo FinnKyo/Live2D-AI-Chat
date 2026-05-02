@@ -261,7 +261,6 @@ function initUpload() {
     });
 }
 
-/* Removed old navigation tabs logic */
 async function uploadFile(file) {
     const progressEl = document.getElementById('upload-progress');
     const progressFill = document.getElementById('progress-fill');
@@ -494,7 +493,7 @@ async function saveMappings() {
 }
 
 function resetMappings() {
-    document.querySelectorAll('.mapping-select').forEach(select => {
+    document.querySelectorAll('.mapping-select-exp, .mapping-select-motion').forEach(select => {
         select.value = '';
     });
     showStatus('mapping-status', '✓ 已重置为无映射', 'success');

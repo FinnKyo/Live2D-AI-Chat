@@ -190,31 +190,6 @@ def api_characters():
     return jsonify(result)
 
 
-@app.route("/api/characters/<char_id>/info", methods=["GET"])
-def api_character_info(char_id):
-    """获取指定角色的详细信息"""
-    char_dir = get_character_dir(char_id)
-    if not char_dir:
-        return jsonify({"error": "角色不存在"}), 404
-
-    model_json = find_model_json(char_dir)
-    if not model_json:
-        return jsonify({"error": "未找到模型文件"}), 404
-
-    model_path = os.path.join(char_dir, model_json)
-    try:
-        with open(model_path, "r", encoding="utf-8") as f:
-            model_data = json.load(f)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    return jsonify({
-        "id": char_id,
-        "model_json": model_json,
-        "model_data": model_data,
-    })
-
-
 @app.route("/api/upload_character", methods=["POST"])
 def api_upload_character():
     """上传 Live2D 角色 ZIP 文件"""
