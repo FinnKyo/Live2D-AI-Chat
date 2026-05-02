@@ -1,0 +1,24 @@
+# Character Expression and Motion Mappings
+# Structure:
+# character_id:
+#   emotion_key:
+#     expression: "expression_name" (optional)
+#     motion: "group_name:index" (optional)
+#
+# Note: emotion_key is the tag used by AI (e.g., [happy])
+
+character1:
+  happy:
+    expression: "happy"
+    motion: ":25" # [FIXED]Mgirl07_tianxiao_a
+  angry:
+    expression: "angry"
+    motion: ":21" # [FIXED]Mgirl07_baonu_c
+  shocked:
+    expression: "shocked"
+    motion: ":42" # [FIXED]Mgirl07_jingya
+  sad:
+    expression: "sad"
+    motion: ":49" # [FIXED]Mgirl07_kunao
+  tap:
+    motion: ":37" # [FIXED]Mgirl07_dazhaohu_a

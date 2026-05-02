@@ -7,7 +7,7 @@
     <meta name="description" content="AI Live2D Galgame - 对话界面">
     <title>AI Live2D Galgame - 对话</title>
     <link rel="stylesheet" href="/static/css/main.css">
-    <link rel="stylesheet" href="/static/css/chat.css?v=2">
+    <link rel="stylesheet" href="/static/css/chat.css?v=3">
 </head>
 
 <body>
@@ -27,25 +27,12 @@
 
         <!-- Top Bar -->
         <div class="top-bar">
-            <button class="back-btn" id="btn-back">← 返回</button>
             <span class="char-name-tag" id="char-name-tag">AI 对话</span>
             <div class="top-bar-actions" style="position: relative;">
                 <button class="back-btn" id="btn-sessions"
                     style="font-size: 1.2rem; padding: 0.2rem 0.6rem; margin-right: 0.5rem;" title="聊天记录">📜</button>
                 <button class="back-btn" id="btn-settings"
-                    style="font-size: 1.2rem; padding: 0.2rem 0.6rem;">⚙️</button>
-
-                <div id="chat-settings-panel"
-                    style="display:none; position:absolute; top: 100%; right: 0; background: rgba(10,10,35,0.9); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); width: 250px; margin-top: 0.5rem; z-index: 200;">
-                    <label style="color:#eee; font-size:0.8rem; display:block; margin-bottom:0.5rem;">背景图片 URL</label>
-                    <input type="text" id="chat_background_input" placeholder="https://..."
-                        style="width:100%; margin-bottom: 1rem; padding: 0.3rem; border-radius:4px; border:1px solid #555; background: #222; color: #fff;">
-
-                    <label style="color:#eee; font-size:0.8rem; display:block; margin-bottom:0.5rem;">对话框透明度 <span
-                            id="opacity_val_display">0.75</span></label>
-                    <input type="range" id="chat_opacity_slider" min="0" max="1" step="0.05" value="0.75"
-                        style="width:100%; cursor:pointer;">
-                </div>
+                    style="font-size: 1.2rem; padding: 0.2rem 0.6rem;" title="设置">⚙️</button>
 
                 <div id="chat-sessions-panel"
                     style="display:none; position:absolute; top: 100%; right: 0; background: rgba(10,10,35,0.9); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); width: 300px; margin-top: 0.5rem; z-index: 200; max-height: 400px; overflow-y:auto;">
@@ -57,6 +44,114 @@
                     </div>
                     <div id="sessions-list" style="display:flex; flex-direction:column; gap:0.5rem;">
                         <!-- Session rows -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Side Drawer -->
+        <div class="settings-drawer-overlay" id="settings-overlay"></div>
+        <div class="settings-drawer" id="settings-drawer">
+            <div class="drawer-header">
+                <h3>⚙️ 系统设置</h3>
+                <button class="close-drawer" id="close-settings">✕</button>
+            </div>
+            
+            <div class="drawer-tabs">
+                <button class="tab-btn active" data-tab="tab-api">API</button>
+                <button class="tab-btn" data-tab="tab-character">角色</button>
+                <button class="tab-btn" data-tab="tab-prompt">提示词</button>
+                <button class="tab-btn" data-tab="tab-display">显示</button>
+            </div>
+
+            <div class="drawer-content">
+                <!-- API Tab -->
+                <div class="tab-panel active" id="tab-api">
+                    <div class="form-group">
+                        <label for="api_url">API 地址</label>
+                        <input type="text" id="api_url" placeholder="https://api.openai.com" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="api_key">API Key</label>
+                        <input type="password" id="api_key" placeholder="sk-..." autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="model_name">模型名称</label>
+                        <input type="text" id="model_name" placeholder="gpt-3.5-turbo">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="temperature">温度</label>
+                            <input type="number" id="temperature" min="0" max="2" step="0.1" value="1.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="max_tokens">最大回复</label>
+                            <input type="number" id="max_tokens" min="10" max="8000" step="100" value="3000">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" id="btn-save-api">💾 保存 API 设置</button>
+                    <button class="btn btn-secondary btn-sm w-100 mt-2" id="btn-test-api">🔌 测试连接</button>
+                    <div class="status-msg" id="settings-status"></div>
+                </div>
+
+                <!-- Character Tab -->
+                <div class="tab-panel" id="tab-character">
+                    <div class="form-group">
+                        <label>选择角色模型</label>
+                        <div id="character-list" class="character-grid-mini">
+                            <!-- Loaded dynamically -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="char_name">角色显示名称</label>
+                        <input type="text" id="char_name" placeholder="角色名字...">
+                    </div>
+                    <div class="form-group">
+                        <label for="char_persona">角色描述 (Persona)</label>
+                        <textarea id="char_persona" rows="4" placeholder="角色性格、背景..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="char_greeting">开场白</label>
+                        <textarea id="char_greeting" rows="2" placeholder="角色的第一句话..."></textarea>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" id="btn-save-char">💾 保存角色信息</button>
+                    <div class="status-msg" id="char-info-status"></div>
+                </div>
+
+                <!-- Prompt Tab -->
+                <div class="tab-panel" id="tab-prompt">
+                    <div class="form-group">
+                        <label for="custom_system_prompt">全局系统提示词</label>
+                        <textarea id="custom_system_prompt" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="world_scenario">世界观/场景</label>
+                        <textarea id="world_scenario" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="user_persona">你的设定</label>
+                        <textarea id="user_persona" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="authors_note">深度提示词 (Author's Note)</label>
+                        <textarea id="authors_note" rows="2"></textarea>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" id="btn-save-prompt">💾 保存提示词</button>
+                </div>
+
+                <!-- Display Tab -->
+                <div class="tab-panel" id="tab-display">
+                    <div class="form-group">
+                        <label>背景图片 URL</label>
+                        <input type="text" id="chat_background_input" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label>对话框透明度 <span id="opacity_val_display">0.75</span></label>
+                        <input type="range" id="chat_opacity_slider" min="0" max="1" step="0.05" value="0.75">
+                    </div>
+                    <div class="form-group">
+                        <label>模型缩放 <span id="size-value" class="size-value">50%</span></label>
+                        <input type="range" id="size-slider" class="size-slider" min="0.3" max="1.5" step="0.05" value="0.5">
                     </div>
                 </div>
             </div>
@@ -103,8 +198,8 @@
     <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
 
     <!-- App Scripts -->
-    <script src="/static/js/live2d-helper.js?v=15"></script>
-    <script src="/static/js/chat.js?v=15"></script>
+    <script src="/static/js/live2d-helper.js?v=16"></script>
+    <script src="/static/js/chat.js?v=18"></script>
 </body>
 
 </html>

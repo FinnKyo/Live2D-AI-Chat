@@ -105,19 +105,219 @@ function parseEmotionTag(reply) {
     return { emotion: 'neutral', text: reply };
 }
 
+// === Drawer & Tab Logic ===
+function initSettingsDrawer() {
+    const btnSettings = document.getElementById('btn-settings');
+    const drawer = document.getElementById('settings-drawer');
+    const overlay = document.getElementById('settings-overlay');
+    const closeBtn = document.getElementById('close-settings');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    const toggleDrawer = (show) => {
+        if (show) {
+            drawer.classList.add('active');
+            overlay.classList.add('active');
+            overlay.style.display = 'block';
+            loadDrawerContent();
+        } else {
+            drawer.classList.remove('active');
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                if (!drawer.classList.contains('active')) overlay.style.display = 'none';
+            }, 300);
+        }
+    };
+
+    if (btnSettings) btnSettings.addEventListener('click', () => toggleDrawer(true));
+    if (closeBtn) closeBtn.addEventListener('click', () => toggleDrawer(false));
+    if (overlay) overlay.addEventListener('click', () => toggleDrawer(false));
+
+    // Tab switching
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.getAttribute('data-tab');
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabPanels.forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(target).classList.add('active');
+        });
+    });
+
+    // Save buttons
+    document.getElementById('btn-save-api').addEventListener('click', () => {
+        saveSettings(['api_url', 'api_key', 'model_name', 'temperature', 'max_tokens']);
+        showStatus('settings-status', '✓ API 设置已保存', 'success');
+    });
+
+    document.getElementById('btn-test-api').addEventListener('click', testConnection);
+
+    document.getElementById('btn-save-char').addEventListener('click', () => {
+        const fields = ['char_name', 'char_persona', 'char_greeting'];
+        saveSettings(fields);
+        
+        // Update per-character storage if a character is selected
+        const charId = localStorage.getItem('galgame_character');
+        if (charId) {
+            fields.forEach(f => {
+                const el = document.getElementById(f);
+                if (el) localStorage.setItem(`galgame_${f}_${charId}`, el.value.trim());
+            });
+        }
+        
+        // Update current state and UI
+        state.charName = document.getElementById('char_name').value || 'Character';
+        const charNameTag = document.getElementById('char-name-tag');
+        if (charNameTag) charNameTag.textContent = `${state.charName} · AI 对话`;
+        const dialogueName = document.getElementById('dialogue-name');
+        if (dialogueName) dialogueName.textContent = state.charName;
+
+        showStatus('char-info-status', '✓ 角色信息已保存', 'success');
+    });
+
+    document.getElementById('btn-save-prompt').addEventListener('click', () => {
+        saveSettings(['custom_system_prompt', 'world_scenario', 'user_persona', 'authors_note']);
+        initSystemMessage();
+        alert('提示词已更新');
+    });
+}
+
+function saveSettings(fields) {
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) localStorage.setItem('galgame_' + id, el.value.trim());
+    });
+}
+
+function loadDrawerContent() {
+    // Load all fields from localStorage
+    const fields = ['api_url', 'api_key', 'model_name', 'temperature', 'max_tokens', 'char_name', 'char_persona', 'char_greeting', 'custom_system_prompt', 'world_scenario', 'user_persona', 'authors_note', 'chat_background_input'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const saved = localStorage.getItem('galgame_' + id);
+            if (saved) el.value = saved;
+        }
+    });
+    
+    // Load character list
+    loadCharactersInDrawer();
+}
+
+async function loadCharactersInDrawer() {
+    const list = document.getElementById('character-list');
+    if (!list) return;
+
+    try {
+        const resp = await fetch('/api/characters');
+        const characters = await resp.json();
+        const currentId = localStorage.getItem('galgame_character');
+
+        list.innerHTML = characters.map(c => `
+            <div class="char-item-mini ${c.id === currentId ? 'active' : ''}" onclick="selectCharacterMini('${c.id}', '${c.model_url}', '${c.name}')">
+                <img src="${c.thumbnail || '/static/img/default_avatar.png'}" class="char-thumb-mini" onerror="this.src='/static/img/default_avatar.png'">
+                <span class="char-name-mini">${escapeHtml(c.name)}</span>
+            </div>
+        `).join('');
+    } catch (e) {
+        list.innerHTML = '加载角色失败';
+    }
+}
+
+window.selectCharacterMini = async function(id, modelUrl, name) {
+    if (localStorage.getItem('galgame_character') === id) return;
+
+    localStorage.setItem('galgame_character', id);
+    localStorage.setItem('galgame_model_url', modelUrl);
+    
+    // Load per-character info if available
+    const fields = ['char_name', 'char_persona', 'char_greeting'];
+    fields.forEach(f => {
+        const saved = localStorage.getItem(`galgame_${f}_${id}`);
+        const el = document.getElementById(f);
+        if (el) el.value = saved || (f === 'char_name' ? name : '');
+    });
+
+    // Highlight in UI
+    document.querySelectorAll('.char-item-mini').forEach(item => {
+        item.classList.toggle('active', item.innerText.includes(name));
+    });
+
+    // Reload model
+    if (state.live2d) {
+        const loadingEl = document.getElementById('model-loading');
+        if (loadingEl) {
+            loadingEl.style.display = 'flex';
+            loadingEl.classList.remove('hidden');
+        }
+        
+        const success = await state.live2d.init(modelUrl);
+        
+        if (loadingEl) {
+            loadingEl.classList.add('hidden');
+            setTimeout(() => loadingEl.style.display = 'none', 600);
+        }
+        
+        if (success) {
+            // Update UI name
+            state.charName = document.getElementById('char_name').value || name;
+            state.charId = id;
+            document.getElementById('char-name-tag').textContent = `${state.charName} · AI 对话`;
+            document.getElementById('dialogue-name').textContent = state.charName;
+            
+            // Re-init system prompt with new character
+            initSystemMessage();
+            cacheCharacterData(id);
+        }
+    }
+};
+
+async function testConnection() {
+    const url = document.getElementById('api_url').value.trim();
+    const key = document.getElementById('api_key').value.trim();
+    if (!url || !key) {
+        showStatus('settings-status', '✗ 请填写 API 地址和 Key', 'error');
+        return;
+    }
+    showStatus('settings-status', '⏳ 正在测试连接...', 'success');
+    try {
+        const resp = await fetch('/api/models', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_url: url, api_key: key })
+        });
+        const data = await resp.json();
+        if (data.error) {
+            showStatus('settings-status', '✗ ' + data.error, 'error');
+        } else {
+            showStatus('settings-status', '✓ 连接成功！', 'success');
+        }
+    } catch (e) {
+        showStatus('settings-status', '✗ 连接失败: ' + e.message, 'error');
+    }
+}
+
+function showStatus(id, msg, type) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'status-msg show ' + type;
+    setTimeout(() => el.className = 'status-msg', 3000);
+}
+
 // === Init ===
 document.addEventListener('DOMContentLoaded', async () => {
+    initSettingsDrawer();
     const settings = getSettings();
     if (!settings.apiUrl || !settings.apiKey) {
-        alert('请先在主页设置 API 信息');
-        window.location.href = '/';
-        return;
+        alert('请先配置 API 信息以开始对话');
+        // Open settings drawer
+        document.getElementById('btn-settings').click();
     }
 
     if (!settings.modelUrl) {
-        alert('请先在主页选择一个角色');
-        window.location.href = '/';
-        return;
+        // If no model, also open settings
+        document.getElementById('btn-settings').click();
     }
 
     // Set character name in UI
@@ -465,18 +665,29 @@ async function cacheCharacterData(charId) {
 
 // === Size Slider ===
 function initSizeSlider() {
-    const slider = document.getElementById('size-slider');
-    const valueEl = document.getElementById('size-value');
-    if (!slider || !state.live2d) return;
+    const sliders = document.querySelectorAll('.size-slider');
+    const valueEls = document.querySelectorAll('.size-value');
+    
+    if (sliders.length === 0 || !state.live2d) return;
 
-    // Set initial value from live2d helper
-    slider.value = state.live2d.getScale();
-    if (valueEl) valueEl.textContent = Math.round(state.live2d.getScale() * 100) + '%';
+    const currentScale = state.live2d.getScale();
+    const percentStr = Math.round(currentScale * 100) + '%';
 
-    slider.addEventListener('input', () => {
-        const val = parseFloat(slider.value);
-        state.live2d.setScale(val);
-        if (valueEl) valueEl.textContent = Math.round(val * 100) + '%';
+    // Set initial values
+    sliders.forEach(s => s.value = currentScale);
+    valueEls.forEach(v => v.textContent = percentStr);
+
+    sliders.forEach(slider => {
+        slider.addEventListener('input', () => {
+            const val = parseFloat(slider.value);
+            state.live2d.setScale(val);
+            
+            const newPercentStr = Math.round(val * 100) + '%';
+            
+            // Sync all sliders and labels
+            sliders.forEach(s => { if (s !== slider) s.value = val; });
+            valueEls.forEach(v => v.textContent = newPercentStr);
+        });
     });
 }
 
@@ -498,11 +709,6 @@ function initChatEvents() {
         sendBtn.addEventListener('click', sendMessage);
     }
 
-    // Back button
-    document.getElementById('btn-back').addEventListener('click', () => {
-        window.location.href = '/';
-    });
-    
     // Click dialogue to skip typewriter
     const dialogueBox = document.querySelector('.dialogue-box');
     if (dialogueBox) {

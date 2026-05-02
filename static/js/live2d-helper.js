@@ -65,8 +65,8 @@ class Live2DHelper {
             this.ready = true;
             console.log('Live2D model loaded successfully');
 
-            // Load expression-motion mapping from localStorage
-            this.loadMappings();
+            // Load expression-motion mapping from backend config.yml
+            await this.loadMappings();
 
             // Build emotion-to-expression map from model's expressions
             this.buildEmotionExpressionMap();
@@ -168,22 +168,24 @@ class Live2DHelper {
     /**
      * 加载表情-动作映射配置
      */
-    loadMappings() {
+    async loadMappings() {
         const charId = localStorage.getItem('galgame_character');
         if (!charId) return;
 
         try {
-            const saved = localStorage.getItem(`galgame_mapping_${charId}`);
-            if (saved) {
-                const mappings = JSON.parse(saved);
-                // Convert "Group:Index" format to { group, index } object
+            // 首先尝试从后端获取 config.yml 的配置
+            const resp = await fetch(`/api/mappings/${charId}`);
+            const mappings = await resp.json();
+            
+            if (mappings && Object.keys(mappings).length > 0) {
+                // Convert mapping config to helper's internal format
                 this.expressionMotionMap = {};
                 for (const [expName, config] of Object.entries(mappings)) {
                     let motionGroup = null;
                     let motionIndex = null;
                     let expressionName = null;
 
-                    // Backwards compatibility with old string format "Group:Index"
+                    // Support both string format "Group:Index" and object format
                     if (typeof config === 'string') {
                         const parts = config.split(':');
                         if (parts.length === 2) {
@@ -207,10 +209,59 @@ class Live2DHelper {
                         index: motionIndex,
                     };
                 }
-                console.log('Loaded expression-motion mappings:', this.expressionMotionMap);
+                console.log('Loaded mappings from backend config.yml:', this.expressionMotionMap);
+            } else {
+                // 如果后端没有配置，尝试回退到 localStorage (兼容旧版本)
+                const saved = localStorage.getItem(`galgame_mapping_${charId}`);
+                if (saved) {
+                    // ... (保持原有的解析逻辑，或者简单合并)
+                    const localMappings = JSON.parse(saved);
+                    // (此处省略详细解析逻辑以节省篇幅，实际应用中可以复用上面的循环)
+                    this.parseMappingData(localMappings);
+                }
             }
         } catch (e) {
-            console.warn('Failed to load mappings:', e);
+            console.warn('Failed to load mappings from backend:', e);
+            // Error fallback: try localStorage
+            try {
+                const saved = localStorage.getItem(`galgame_mapping_${charId}`);
+                if (saved) this.parseMappingData(JSON.parse(saved));
+            } catch (e2) {}
+        }
+    }
+
+    /**
+     * 将映射数据解析为内部格式
+     */
+    parseMappingData(mappings) {
+        if (!mappings) return;
+        for (const [expName, config] of Object.entries(mappings)) {
+            let motionGroup = null;
+            let motionIndex = null;
+            let expressionName = null;
+
+            if (typeof config === 'string') {
+                const parts = config.split(':');
+                if (parts.length === 2) {
+                    motionGroup = parts[0];
+                    motionIndex = parseInt(parts[1], 10);
+                }
+            } else if (typeof config === 'object' && config !== null) {
+                expressionName = config.expression || null;
+                if (config.motion) {
+                    const parts = config.motion.split(':');
+                    if (parts.length === 2) {
+                        motionGroup = parts[0];
+                        motionIndex = parseInt(parts[1], 10);
+                    }
+                }
+            }
+
+            this.expressionMotionMap[expName.toLowerCase()] = {
+                expression: expressionName ? expressionName.toLowerCase().replace('.exp3.json', '') : null,
+                group: motionGroup,
+                index: motionIndex,
+            };
         }
     }
 

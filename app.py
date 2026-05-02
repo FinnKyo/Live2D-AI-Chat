@@ -5,6 +5,7 @@ AI Live2D Galgame - Flask 后端
 """
 import os
 import json
+import yaml
 import urllib.request
 import urllib.error
 from flask import Flask, render_template, request, jsonify, send_from_directory, abort
@@ -19,7 +20,7 @@ CHARACTERS_DIR = os.path.join(app.root_path, "live2d_characters")
 os.makedirs(CHARACTERS_DIR, exist_ok=True)
 
 # 表情-动作映射配置文件
-MAPPING_FILE = os.path.join(app.root_path, "emotion_mappings.json")
+MAPPING_FILE = os.path.join(app.root_path, "config.yml")
 
 
 def get_all_characters():
@@ -73,7 +74,10 @@ def load_mappings():
     """加载表情-动作映射配置"""
     if os.path.exists(MAPPING_FILE):
         with open(MAPPING_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            try:
+                return yaml.safe_load(f) or {}
+            except yaml.YAMLError:
+                return {}
     return {}
 
 
@@ -88,23 +92,7 @@ def save_mappings(data):
 # ============================================================
 @app.route("/")
 def index():
-    """主页 - API 设置"""
-    return render_template("api.html")
-
-@app.route("/character")
-def character():
-    """角色设置"""
-    return render_template("character.html")
-
-@app.route("/prompt")
-def prompt():
-    """全局提示词设置"""
-    return render_template("prompt.html")
-
-
-@app.route("/chat")
-def chat():
-    """Galgame 对话界面"""
+    """主页 - 直接进入对话界面"""
     return render_template("chat.html")
 
 
@@ -201,16 +189,11 @@ def api_get_mappings(char_id):
 
 @app.route("/api/mappings/<char_id>", methods=["POST"])
 def api_save_mappings(char_id):
-    """保存指定角色的表情-动作映射"""
-    data = request.json
-    if data is None:
-        return jsonify({"error": "无效的数据"}), 400
-
-    mappings = load_mappings()
-    mappings[char_id] = data
-    save_mappings(mappings)
-
-    return jsonify({"success": True, "message": "映射配置已保存"})
+    """保存指定角色的表情-动作映射 (已禁用，请手动修改 config.yml)"""
+    return jsonify({
+        "error": "配置目前为只读模式。请直接修改根目录下的 config.yml 文件以更新映射，这样可以保留您的注释和格式。",
+        "success": False
+    }), 403
 
 
 # ============================================================
