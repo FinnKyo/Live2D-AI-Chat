@@ -25,7 +25,7 @@
 
 ### 1. 克隆项目
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/FinnKyo/Live2D-AI-Chat.git
 cd AI-Live2D-Galgame
 ```
 
