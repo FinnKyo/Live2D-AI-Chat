@@ -26,7 +26,7 @@
 ### 1. 克隆项目
 ```bash
 git clone https://github.com/FinnKyo/Live2D-AI-Chat.git
-cd AI-Live2D-Galgame
+cd Live2D-AI-Chat
 ```
 
 ### 2. 安装依赖
