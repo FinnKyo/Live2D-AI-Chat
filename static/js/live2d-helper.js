@@ -25,6 +25,11 @@ class Live2DHelper {
          * 情感关键词 → 表情索引映射
          */
         this.emotionExpressionMap = {};
+
+        /**
+         * 动作文件名 → { group, index } 映射
+         */
+        this.motionFilenameMap = {};
     }
 
     async init(charId, modelPath) {
@@ -74,11 +79,12 @@ class Live2DHelper {
             this.onResize();
             this.ready = true;
 
+            // Build maps from model data
+            this.buildEmotionExpressionMap();
+            this.buildMotionFilenameMap();
+
             // Load expression-motion mapping from backend
             await this.loadMappings();
-
-            // Build emotion-to-expression map from model's expressions
-            this.buildEmotionExpressionMap();
 
             // Play idle animation
             this.playMotion('Idle', 0);
@@ -190,6 +196,7 @@ class Live2DHelper {
         for (const [expName, config] of Object.entries(mappings)) {
             let motionGroup = null;
             let motionIndex = null;
+            let motionFilename = null;
             let expressionName = null;
 
             if (typeof config === 'string') {
@@ -197,6 +204,8 @@ class Live2DHelper {
                 if (parts.length === 2) {
                     motionGroup = parts[0];
                     motionIndex = parseInt(parts[1], 10);
+                } else {
+                    motionFilename = config;
                 }
             } else if (typeof config === 'object' && config !== null) {
                 expressionName = config.expression || null;
@@ -205,6 +214,8 @@ class Live2DHelper {
                     if (parts.length === 2) {
                         motionGroup = parts[0];
                         motionIndex = parseInt(parts[1], 10);
+                    } else {
+                        motionFilename = config.motion;
                     }
                 }
             }
@@ -213,7 +224,32 @@ class Live2DHelper {
                 expression: expressionName ? expressionName.toLowerCase().replace('.exp3.json', '') : null,
                 group: motionGroup,
                 index: motionIndex,
+                filename: motionFilename,
             };
+        }
+    }
+
+    /**
+     * 根据模型文件构建动作文件名映射表
+     */
+    buildMotionFilenameMap() {
+        if (!this.model || !this.model.internalModel) return;
+        this.motionFilenameMap = {};
+        
+        try {
+            const motions = this.model.internalModel.settings.motions;
+            for (const [group, list] of Object.entries(motions)) {
+                list.forEach((motion, index) => {
+                    const filePath = motion.File || motion.file || '';
+                    const filename = filePath.split('/').pop().replace('.motion3.json', '').toLowerCase();
+                    if (filename) {
+                        this.motionFilenameMap[filename] = { group, index };
+                    }
+                });
+            }
+            console.log('Motion-Filename map:', this.motionFilenameMap);
+        } catch (e) {
+            console.warn('Could not build motion-filename map:', e);
         }
     }
 
@@ -280,15 +316,21 @@ class Live2DHelper {
         if (mapping && mapping.group !== null && mapping.index !== null && mapping.group !== undefined) {
             this.playMotion(mapping.group, mapping.index);
             return key;
-        } else {
-            // Default motion
-            try {
-                this.playMotion('', Math.floor(Math.random() * 3));
-            } catch (e) {
-                this.playMotion('Idle', 0);
+        } else if (mapping && mapping.filename) {
+            const motionInfo = this.motionFilenameMap[mapping.filename.toLowerCase()];
+            if (motionInfo) {
+                this.playMotion(motionInfo.group, motionInfo.index);
+                return key;
             }
-            return key;
         }
+        
+        // Default motion
+        try {
+            this.playMotion('', Math.floor(Math.random() * 3));
+        } catch (e) {
+            this.playMotion('Idle', 0);
+        }
+        return key;
     }
 
     destroy() {

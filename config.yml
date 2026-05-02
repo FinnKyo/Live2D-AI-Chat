@@ -10,15 +10,46 @@
 character1:
   happy:
     expression: "happy"
-    motion: ":25" # [FIXED]Mgirl07_tianxiao_a
+    motion: "[FIXED]Mgirl07_keai_a"
+  furious:
+    motion: "[FIXED]Mgirl07_baonu_c"
   angry:
-    expression: "angry"
-    motion: ":21" # [FIXED]Mgirl07_baonu_c
+    motion: "[FIXED]Mgirl07_nu"
   shocked:
-    expression: "shocked"
-    motion: ":42" # [FIXED]Mgirl07_jingya
+    motion: "[FIXED]Mgirl07_xianqunzi"
   sad:
-    expression: "sad"
-    motion: ":49" # [FIXED]Mgirl07_kunao
+    motion: "[FIXED]Mgirl07_kunao"
   tap:
-    motion: ":37" # [FIXED]Mgirl07_dazhaohu_a
+    motion: "[FIXED]Mgirl07_xiunu_a"
+  confused:
+    motion: "[FIXED]Mgirl07_yihuo"
+  thoughtful:
+    motion: "[FIXED]Mgirl07_sikao_a"
+  neutral:
+    expression: "neutral"
+    motion: "[FIXED]Mgirl07_stand"
+  approval:
+    expression: "approval"
+    motion: "[FIXED]Mgirl07_diantou"
+  disapproval:
+    motion: "[FIXED]Mgirl07_baishou2"
+  shy:
+    motion: "[FIXED]Mgirl07_haixiu"
+  Blushed:
+    motion: "[FIXED]Mgirl07_xiunu_a"
+  Indignant:
+    motion: "[FIXED]Mgirl07_baonu_c"
+  embarrassed:
+    motion: "[FIXED]Mgirl07_ganga_c"
+  disappointed:
+    motion: "[FIXED]Mgirl07_xianqi_c"
+  humiliated:
+    motion: "[FIXED]Mgirl07_xianqunzi"
+  surprised:
+    motion: "[FIXED]Mgirl07_jingya"
+  Devoted:
+    motion: "[FIXED]Mgirl07_tuoyehaixiu_a"
+  playful:
+    motion: "[FIXED]Mgirl07_sajiao_a"
+  
+  
