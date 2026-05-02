@@ -51,7 +51,7 @@ function getSettings() {
         apiUrl: localStorage.getItem('galgame_api_url') || '',
         apiKey: localStorage.getItem('galgame_api_key') || '',
         model: localStorage.getItem('galgame_model_name') || 'gpt-3.5-turbo',
-        charName: state.charName || 'Character',
+        charName: localStorage.getItem('galgame_char_name') || state.charName || 'Character',
         charPersona: localStorage.getItem('galgame_char_persona') || '',
         worldScenario: localStorage.getItem('galgame_world_scenario') || '',
         charGreeting: localStorage.getItem('galgame_char_greeting') || '你好呀！',
@@ -213,7 +213,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Take the first character as the default
             const char = characters[0];
             state.charId = char.id;
-            state.charName = char.name;
+            // Prioritize saved name from localStorage
+            state.charName = localStorage.getItem('galgame_char_name') || char.name;
             state.modelUrl = char.model_url;
         }
     } catch (e) {
@@ -303,10 +304,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             state.messages = [];
             initSystemMessage();
             
-            if (settings.charGreeting) {
-                state.history.push({ role: 'assistant', content: settings.charGreeting });
-                state.messages.push({ role: 'assistant', content: settings.charGreeting });
-                showDialogue(state.charName, settings.charGreeting, false, 'happy');
+            const currentSettings = getSettings();
+            if (currentSettings.charGreeting) {
+                state.history.push({ role: 'assistant', content: currentSettings.charGreeting });
+                state.messages.push({ role: 'assistant', content: currentSettings.charGreeting });
+                showDialogue(state.charName, currentSettings.charGreeting, false, 'happy');
             } else {
                 const textEl = document.querySelector('.dialogue-text');
                 if (textEl) textEl.innerHTML = '<i>(新对话已开启)</i>';
@@ -490,17 +492,24 @@ window.deleteSession = function(id, event) {
     if (!confirm('确定要删除这条对话记录吗？')) return;
     
     let sessions = JSON.parse(localStorage.getItem('galgame_sessions_' + state.charId) || '[]');
+    const index = sessions.findIndex(s => s.id === id);
     sessions = sessions.filter(s => s.id !== id);
     localStorage.setItem('galgame_sessions_' + state.charId, JSON.stringify(sessions));
     
     if (currentSessionId === id) {
-        currentSessionId = Date.now().toString();
-        state.history = [];
-        state.messages = [];
-        initSystemMessage();
-        const textEl = document.querySelector('.dialogue-text');
-        if (textEl) {
-            textEl.innerHTML = '<i>(新对话已开启)</i>';
+        if (sessions.length > 0) {
+            // Jump to the previous one in chronological order, or the next one if it was the first
+            const nextIndex = (index > 0) ? index - 1 : 0;
+            loadSession(sessions[nextIndex].id);
+        } else {
+            currentSessionId = Date.now().toString();
+            state.history = [];
+            state.messages = [];
+            initSystemMessage();
+            const textEl = document.querySelector('.dialogue-text');
+            if (textEl) {
+                textEl.innerHTML = '<i>(新对话已开启)</i>';
+            }
         }
     }
     renderSessions();
